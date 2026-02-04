@@ -1,0 +1,10 @@
+[server]
+host = "0.0.0.0"
+port = 8080
+
+[database]
+url = "postgresql://postgres:postgres@localhost:5432/data_service_db"
+max_connections = 10
+
+[redis]
+url = "redis://localhost:6379"

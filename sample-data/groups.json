@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Engineering",
+    "parent_group_name": null
+  },
+  {
+    "name": "Backend Team",
+    "parent_group_name": "Engineering"
+  },
+  {
+    "name": "Frontend Team",
+    "parent_group_name": "Engineering"
+  },
+  {
+    "name": "Backend Team A",
+    "parent_group_name": "Backend Team"
+  },
+  {
+    "name": "Backend Team B",
+    "parent_group_name": "Backend Team"
+  }
+]

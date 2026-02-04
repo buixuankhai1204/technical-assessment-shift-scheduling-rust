@@ -1,0 +1,62 @@
+[
+  {
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "position": "Senior Developer",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Jane Smith",
+    "email": "jane.smith@example.com",
+    "position": "Developer",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Bob Johnson",
+    "email": "bob.johnson@example.com",
+    "position": "Team Lead",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Alice Williams",
+    "email": "alice.williams@example.com",
+    "position": "Developer",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Charlie Brown",
+    "email": "charlie.brown@example.com",
+    "position": "Junior Developer",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Diana Prince",
+    "email": "diana.prince@example.com",
+    "position": "Senior Developer",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Eve Davis",
+    "email": "eve.davis@example.com",
+    "position": "Developer",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Frank Miller",
+    "email": "frank.miller@example.com",
+    "position": "Developer",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Grace Lee",
+    "email": "grace.lee@example.com",
+    "position": "Team Lead",
+    "status": "ACTIVE"
+  },
+  {
+    "name": "Henry Wilson",
+    "email": "henry.wilson@example.com",
+    "position": "Junior Developer",
+    "status": "INACTIVE"
+  }
+]

@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgresql:
+    image: postgres:16-alpine
+    container_name: shift-scheduler-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - shift-scheduler-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: shift-scheduler-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - shift-scheduler-network
+
+  # Data Service
+  data-service:
+    build:
+      context: .
+      dockerfile: data-service/Dockerfile
+    container_name: shift-scheduler-data-service
+    environment:
+      APP__SERVER__HOST: 0.0.0.0
+      APP__SERVER__PORT: 8080
+      APP__DATABASE__URL: postgresql://postgres:postgres@postgresql:5432/data_service_db
+      APP__DATABASE__MAX_CONNECTIONS: 10
+      APP__REDIS__URL: redis://redis:6379
+      RUST_LOG: data_service=debug,tower_http=debug
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - shift-scheduler-network
+    restart: unless-stopped
+
+  # Scheduling Service
+  scheduling-service:
+    build:
+      context: .
+      dockerfile: scheduling-service/Dockerfile
+    container_name: shift-scheduler-scheduling-service
+    environment:
+      APP__SERVER__HOST: 0.0.0.0
+      APP__SERVER__PORT: 8081
+      APP__DATABASE__URL: postgresql://postgres:postgres@postgresql:5432/scheduling_service_db
+      APP__DATABASE__MAX_CONNECTIONS: 10
+      APP__DATA_SERVICE__URL: http://data-service:8080
+      APP__SCHEDULING_RULES__MIN_DAY_OFF_PER_WEEK: 1
+      APP__SCHEDULING_RULES__MAX_DAY_OFF_PER_WEEK: 2
+      APP__SCHEDULING_RULES__NO_MORNING_AFTER_EVENING: true
+      APP__SCHEDULING_RULES__MAX_DAILY_SHIFT_DIFF: 1
+      RUST_LOG: scheduling_service=debug,tower_http=debug
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      data-service:
+        condition: service_started
+    networks:
+      - shift-scheduler-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  shift-scheduler-network:
+    driver: bridge

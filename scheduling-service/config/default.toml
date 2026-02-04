@@ -1,0 +1,16 @@
+[server]
+host = "0.0.0.0"
+port = 8081
+
+[database]
+url = "postgresql://postgres:postgres@localhost:5432/scheduling_service_db"
+max_connections = 10
+
+[data_service]
+url = "http://localhost:8080"
+
+[scheduling_rules]
+min_day_off_per_week = 1
+max_day_off_per_week = 2
+no_morning_after_evening = true
+max_daily_shift_diff = 1

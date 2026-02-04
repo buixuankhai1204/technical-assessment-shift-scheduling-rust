@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+.claude
+
+# Rust
+target/
+Cargo.lock
+
+# Documentation
+*.md
+!README.md
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Sample data
+sample-data/
+
+# PDF
+*.pdf
