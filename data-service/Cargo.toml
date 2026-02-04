@@ -30,5 +30,8 @@ shared = { path = "../shared" }
 # Async trait support
 async-trait = { workspace = true }
 
+# Futures utilities
+futures = "0.3"
+
 [dev-dependencies]
 mockall = { workspace = true }

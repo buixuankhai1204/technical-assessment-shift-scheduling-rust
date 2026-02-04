@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Clone, Deserialize, IntoParams)]
+#[derive(Debug, Clone, Deserialize, IntoParams, ToSchema)]
 pub struct PaginationParams {
     #[serde(default = "default_page")]
     pub page: u32,

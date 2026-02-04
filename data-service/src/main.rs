@@ -3,9 +3,19 @@ mod domain;
 mod infrastructure;
 
 use anyhow::Result;
+use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use infrastructure::{config::Settings, database, redis};
+use api::AppState;
+use domain::repositories::{GroupRepository, MembershipRepository, StaffRepository};
+use domain::services::GroupService;
+use infrastructure::{
+    config::Settings,
+    database, redis,
+    repositories::{
+        PostgresGroupRepository, PostgresMembershipRepository, PostgresStaffRepository,
+    },
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -34,16 +44,45 @@ async fn main() -> Result<()> {
     tracing::info!("Database migrations completed");
 
     // Initialize Redis connection
-    let _redis_pool = redis::create_redis_pool(&settings.redis.url).await?;
+    let redis_pool = redis::create_redis_pool(&settings.redis.url).await?;
     tracing::info!("Redis connection established");
 
+    // Initialize repositories
+    let staff_repo: Arc<dyn StaffRepository> =
+        Arc::new(PostgresStaffRepository::new(db_pool.clone()));
+    let group_repo: Arc<dyn GroupRepository> =
+        Arc::new(PostgresGroupRepository::new(db_pool.clone()));
+    let membership_repo: Arc<dyn MembershipRepository> =
+        Arc::new(PostgresMembershipRepository::new(db_pool.clone()));
+
+    tracing::info!("Repositories initialized");
+
+    // Initialize services
+    let group_service = Arc::new(GroupService::new(
+        group_repo.clone(),
+        staff_repo.clone(),
+        membership_repo.clone(),
+    ));
+
+    tracing::info!("Services initialized");
+
+    // Create application state
+    let app_state = AppState::new(
+        staff_repo,
+        group_repo,
+        membership_repo,
+        group_service,
+        redis_pool,
+    );
+
     // Create router
-    let app = api::create_router(db_pool);
+    let app = api::create_router(app_state);
 
     // Start server
     let listener = tokio::net::TcpListener::bind(settings.server_address()).await?;
     let addr = listener.local_addr()?;
     tracing::info!("Data Service listening on {}", addr);
+    tracing::info!("Swagger UI available at http://{}/swagger-ui", addr);
 
     axum::serve(listener, app).await?;
 

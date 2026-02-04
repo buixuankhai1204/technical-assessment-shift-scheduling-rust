@@ -1,5 +1,7 @@
-// API handlers will be implemented here
-// Example: staff_handlers.rs, group_handlers.rs
+pub mod batch_handlers;
+pub mod group_handlers;
+pub mod membership_handlers;
+pub mod staff_handlers;
 
 use axum::{http::StatusCode, response::IntoResponse, Json};
 use serde_json::json;
