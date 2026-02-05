@@ -9,7 +9,7 @@ use shared::{DomainError, PaginatedResponse, PaginationParams};
 use uuid::Uuid;
 
 use crate::api::state::AppState;
-use crate::domain::entities::{CreateStaffRequest, StaffResponse, UpdateStaffRequest};
+use crate::presentation::{CreateStaffRequest, StaffResponse, UpdateStaffRequest};
 
 const STAFF_CACHE_TTL: u64 = 300; // 5 minutes
 

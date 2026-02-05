@@ -6,7 +6,7 @@ pub struct Settings {
     pub server: ServerSettings,
     pub database: DatabaseSettings,
     pub data_service: DataServiceSettings,
-    pub scheduling_rules: SchedulingRulesSettings,
+    pub scheduling: SchedulingConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -23,15 +23,15 @@ pub struct DatabaseSettings {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct DataServiceSettings {
-    pub url: String,
+    pub host: String,
+    pub port: u16,
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct SchedulingRulesSettings {
-    pub min_day_off_per_week: u8,
-    pub max_day_off_per_week: u8,
-    pub no_morning_after_evening: bool,
-    pub max_daily_shift_diff: u32,
+pub struct SchedulingConfig {
+    pub min_days_off_per_week: usize,
+    pub max_days_off_per_week: usize,
+    pub max_daily_shift_difference: usize,
 }
 
 impl Settings {

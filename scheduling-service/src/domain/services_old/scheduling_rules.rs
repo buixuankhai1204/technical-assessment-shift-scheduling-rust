@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use shared::ShiftType;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -38,7 +38,7 @@ impl ScheduleState {
     pub fn assign(&mut self, staff_id: Uuid, date: NaiveDate, shift: ShiftType) {
         self.assignments
             .entry(staff_id)
-            .or_insert_with(HashMap::new)
+            .or_default()
             .insert(date, shift);
     }
 
@@ -223,7 +223,9 @@ mod tests {
         state.assign(staff_id, monday, ShiftType::DayOff);
         state.assign(
             staff_id,
-            monday.checked_add_signed(chrono::Duration::days(2)).unwrap(),
+            monday
+                .checked_add_signed(chrono::Duration::days(2))
+                .unwrap(),
             ShiftType::DayOff,
         );
 

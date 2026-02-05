@@ -1,6 +1,7 @@
 mod api;
 mod domain;
 mod infrastructure;
+mod presentation;
 
 use anyhow::Result;
 use std::sync::Arc;
@@ -16,6 +17,7 @@ use infrastructure::{
         PostgresGroupRepository, PostgresMembershipRepository, PostgresStaffRepository,
     },
 };
+use crate::infrastructure::GroupService;
 
 #[tokio::main]
 async fn main() -> Result<()> {

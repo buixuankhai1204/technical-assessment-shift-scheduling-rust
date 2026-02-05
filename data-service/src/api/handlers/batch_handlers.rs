@@ -4,17 +4,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::api::state::AppState;
-use crate::domain::entities::{CreateGroupRequest, CreateStaffRequest};
-
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct BatchImportStaffRequest {
-    pub staff: Vec<CreateStaffRequest>,
-}
-
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct BatchImportGroupsRequest {
-    pub groups: Vec<CreateGroupRequest>,
-}
+use crate::presentation::{BatchImportGroupsRequest, BatchImportStaffRequest};
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct BatchImportResponse {

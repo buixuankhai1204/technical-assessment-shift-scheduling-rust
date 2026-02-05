@@ -1,10 +1,18 @@
-use axum::{routing::get, Router};
+use axum::{
+    routing::{get, post},
+    Router,
+};
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::api::handlers;
-use crate::infrastructure::database::DbPool;
+use crate::api::state::AppState;
+use crate::presentation::{
+    CreateScheduleRequest, ScheduleJobSerialize, ScheduleResultSerialize,
+    ScheduleStatusSerialize, ShiftAssignmentSerialize,
+};
+use shared::{JobStatus, ShiftType};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -13,17 +21,38 @@ use crate::infrastructure::database::DbPool;
         version = "1.0.0",
         description = "Asynchronous shift schedule generation API"
     ),
-    paths(),
-    components(schemas())
+    paths(
+        crate::api::handlers::schedule_handlers::submit_schedule,
+        crate::api::handlers::schedule_handlers::get_schedule_status,
+        crate::api::handlers::schedule_handlers::get_schedule_result,
+    ),
+    components(schemas(
+        CreateScheduleRequest,
+        ScheduleJobSerialize,
+        ScheduleStatusSerialize,
+        ScheduleResultSerialize,
+        ShiftAssignmentSerialize,
+        JobStatus,
+        ShiftType,
+    ))
 )]
 struct ApiDoc;
 
-pub fn create_router(db_pool: DbPool) -> Router {
-    let api_router = Router::new().route("/health", get(handlers::health_check));
+pub fn create_router(state: AppState) -> Router {
+    let api_router = Router::new()
+        .route("/schedules", post(handlers::submit_schedule))
+        .route(
+            "/schedules/:schedule_id/status",
+            get(handlers::get_schedule_status),
+        )
+        .route(
+            "/schedules/:schedule_id",
+            get(handlers::get_schedule_result),
+        );
 
     Router::new()
         .nest("/api/v1", api_router)
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .layer(TraceLayer::new_for_http())
-        .with_state(db_pool)
+        .with_state(state)
 }

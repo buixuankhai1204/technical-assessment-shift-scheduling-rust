@@ -9,7 +9,7 @@ use shared::DomainError;
 use uuid::Uuid;
 
 use crate::api::state::AppState;
-use crate::domain::entities::{AddMemberRequest, MembershipResponse};
+use crate::presentation::{AddMemberRequest, MembershipResponse};
 
 /// Add staff to group
 #[utoipa::path(

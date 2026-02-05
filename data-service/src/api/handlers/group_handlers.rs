@@ -9,7 +9,7 @@ use shared::{DomainError, PaginatedResponse, PaginationParams};
 use uuid::Uuid;
 
 use crate::api::state::AppState;
-use crate::domain::entities::{CreateGroupRequest, GroupResponse, UpdateGroupRequest};
+use crate::presentation::{CreateGroupRequest, GroupResponse, UpdateGroupRequest};
 
 const GROUP_CACHE_TTL: u64 = 300; // 5 minutes
 

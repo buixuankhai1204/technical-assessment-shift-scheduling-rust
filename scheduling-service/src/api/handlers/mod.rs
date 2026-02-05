@@ -1,7 +1,3 @@
-use axum::{http::StatusCode, response::IntoResponse, Json};
-use serde_json::json;
+pub mod schedule_handlers;
 
-/// Health check handler
-pub async fn health_check() -> impl IntoResponse {
-    (StatusCode::OK, Json(json!({ "status": "healthy" })))
-}
+pub use schedule_handlers::{get_schedule_result, get_schedule_status, submit_schedule};

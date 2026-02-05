@@ -1,4 +1,4 @@
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use shared::{DomainError, DomainResult, ShiftType};
 use uuid::Uuid;
 
@@ -22,13 +22,13 @@ impl GreedyScheduler {
     ) -> DomainResult<ScheduleState> {
         // Validate that start_date is a Monday
         if start_date.weekday().num_days_from_monday() != 0 {
-            return Err(DomainError::ValidationError(
+            return Err(DomainError::InvalidInput(
                 "Schedule must start on a Monday".to_string(),
             ));
         }
 
         if staff_ids.is_empty() {
-            return Err(DomainError::ValidationError(
+            return Err(DomainError::InvalidInput(
                 "At least one staff member is required".to_string(),
             ));
         }
@@ -40,7 +40,7 @@ impl GreedyScheduler {
         for day_offset in 0..period_days {
             let current_date = start_date
                 .checked_add_signed(chrono::Duration::days(day_offset))
-                .ok_or_else(|| DomainError::ValidationError("Invalid date".to_string()))?;
+                .ok_or_else(|| DomainError::InvalidInput("Invalid date".to_string()))?;
 
             self.assign_shifts_for_day(&mut state, &staff_ids, current_date)?;
         }
@@ -165,20 +165,20 @@ impl GreedyScheduler {
         for week in 0..4 {
             let week_start = start_date
                 .checked_add_signed(chrono::Duration::days(week * 7))
-                .ok_or_else(|| DomainError::ValidationError("Invalid date".to_string()))?;
+                .ok_or_else(|| DomainError::InvalidInput("Invalid date".to_string()))?;
 
             for staff_id in staff_ids {
                 let days_off = state.count_days_off_in_week(*staff_id, week_start);
 
                 if days_off < self.rules.min_days_off_per_week {
-                    return Err(DomainError::ValidationError(format!(
+                    return Err(DomainError::InvalidInput(format!(
                         "Staff {} has only {} days off in week starting {}, minimum is {}",
                         staff_id, days_off, week_start, self.rules.min_days_off_per_week
                     )));
                 }
 
                 if days_off > self.rules.max_days_off_per_week {
-                    return Err(DomainError::ValidationError(format!(
+                    return Err(DomainError::InvalidInput(format!(
                         "Staff {} has {} days off in week starting {}, maximum is {}",
                         staff_id, days_off, week_start, self.rules.max_days_off_per_week
                     )));

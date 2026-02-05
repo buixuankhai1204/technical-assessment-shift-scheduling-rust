@@ -13,7 +13,7 @@ pub enum StaffStatus {
 }
 
 /// Shift type enum
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, PartialEq, Eq, sqlx::Type)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq, Hash, sqlx::Type)]
 #[sqlx(type_name = "shift_type", rename_all = "SCREAMING_SNAKE_CASE")]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ShiftType {
