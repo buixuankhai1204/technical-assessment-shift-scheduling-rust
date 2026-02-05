@@ -1,10 +1,5 @@
-// Repository trait definitions for scheduling service
-// These define the interface for data access
+pub mod schedule_job_repository;
+pub mod shift_assignment_repository;
 
-// Example trait:
-// #[async_trait]
-// pub trait ScheduleJobRepository {
-//     async fn create(&self, job: ScheduleJob) -> Result<ScheduleJob, Error>;
-//     async fn find_by_id(&self, id: &str) -> Result<Option<ScheduleJob>, Error>;
-//     async fn update_status(&self, id: &str, status: JobStatus) -> Result<(), Error>;
-// }
+pub use schedule_job_repository::ScheduleJobRepository;
+pub use shift_assignment_repository::ShiftAssignmentRepository;
