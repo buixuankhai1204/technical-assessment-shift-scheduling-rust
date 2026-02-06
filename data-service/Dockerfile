@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1.83-slim AS builder
+FROM rust:1.88-slim AS builder
 
 WORKDIR /app
 
@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
 COPY Cargo.toml ./
 COPY shared ./shared
 COPY data-service ./data-service
+COPY scheduling-service ./scheduling-service
 COPY sample-data ./sample-data
 
 # Build the application
