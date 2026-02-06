@@ -2,31 +2,26 @@
   {
     "name": "John Doe",
     "email": "john.doe@example.com",
-    "position": "Software Engineer",
-    "status": "Active"
+    "position": "Software Engineer"
   },
   {
     "name": "Jane Smith",
     "email": "jane.smith@example.com",
-    "position": "Senior Developer",
-    "status": "Active"
+    "position": "Senior Developer"
   },
   {
     "name": "Bob Johnson",
     "email": "bob.johnson@example.com",
-    "position": "Team Lead",
-    "status": "Active"
+    "position": "Team Lead"
   },
   {
     "name": "Alice Williams",
     "email": "alice.williams@example.com",
-    "position": "DevOps Engineer",
-    "status": "Active"
+    "position": "DevOps Engineer"
   },
   {
     "name": "Charlie Brown",
     "email": "charlie.brown@example.com",
-    "position": "QA Engineer",
-    "status": "Active"
+    "position": "QA Engineer"
   }
 ]

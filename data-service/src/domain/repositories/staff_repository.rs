@@ -37,7 +37,5 @@ pub trait StaffRepository: Send + Sync {
 
     /// Get staff by group ID
     async fn find_by_group_id(&self, group_id: Uuid) -> DomainResult<Vec<Staff>>;
-
-    /// Find multiple staff by IDs (batch query)
-    async fn find_by_ids(&self, ids: Vec<Uuid>) -> DomainResult<Vec<Staff>>;
+    
 }

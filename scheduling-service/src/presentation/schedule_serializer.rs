@@ -8,12 +8,12 @@ use crate::domain::entities::{ScheduleJob, ShiftAssignment};
 
 /// Schedule job response after submission
 #[derive(Debug, Serialize, ToSchema)]
-pub struct ScheduleJobSerialize {
+pub struct ScheduleJobSerializer {
     pub schedule_id: Uuid,
     pub status: JobStatus,
 }
 
-impl From<ScheduleJob> for ScheduleJobSerialize {
+impl From<ScheduleJob> for ScheduleJobSerializer {
     fn from(job: ScheduleJob) -> Self {
         Self {
             schedule_id: job.id,
@@ -24,7 +24,7 @@ impl From<ScheduleJob> for ScheduleJobSerialize {
 
 /// Schedule status response
 #[derive(Debug, Serialize, ToSchema)]
-pub struct ScheduleStatusSerialize {
+pub struct ScheduleStatusSerializer {
     pub schedule_id: Uuid,
     pub staff_group_id: Uuid,
     pub period_begin_date: NaiveDate,
@@ -35,7 +35,7 @@ pub struct ScheduleStatusSerialize {
     pub completed_at: Option<DateTime<Utc>>,
 }
 
-impl From<ScheduleJob> for ScheduleStatusSerialize {
+impl From<ScheduleJob> for ScheduleStatusSerializer {
     fn from(job: ScheduleJob) -> Self {
         Self {
             schedule_id: job.id,
@@ -52,13 +52,13 @@ impl From<ScheduleJob> for ScheduleStatusSerialize {
 
 /// Shift assignment response
 #[derive(Debug, Serialize, ToSchema)]
-pub struct ShiftAssignmentSerialize {
+pub struct ShiftAssignmentSerializer {
     pub staff_id: Uuid,
     pub date: NaiveDate,
     pub shift: shared::ShiftType,
 }
 
-impl From<ShiftAssignment> for ShiftAssignmentSerialize {
+impl From<ShiftAssignment> for ShiftAssignmentSerializer {
     fn from(assignment: ShiftAssignment) -> Self {
         Self {
             staff_id: assignment.staff_id,
@@ -70,9 +70,9 @@ impl From<ShiftAssignment> for ShiftAssignmentSerialize {
 
 /// Complete schedule result response
 #[derive(Debug, Serialize, ToSchema)]
-pub struct ScheduleResultSerialize {
+pub struct ScheduleResultSerializer {
     pub schedule_id: Uuid,
     pub period_begin_date: NaiveDate,
     pub staff_group_id: Uuid,
-    pub assignments: Vec<ShiftAssignmentSerialize>,
+    pub assignments: Vec<ShiftAssignmentSerializer>,
 }

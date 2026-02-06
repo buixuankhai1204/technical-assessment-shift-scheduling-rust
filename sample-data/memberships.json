@@ -1,0 +1,8 @@
+[
+  { "staff_email": "john.doe@example.com", "group_name": "Backend Team" },
+  { "staff_email": "jane.smith@example.com", "group_name": "Backend Team" },
+  { "staff_email": "jane.smith@example.com", "group_name": "Frontend Team" },
+  { "staff_email": "bob.johnson@example.com", "group_name": "Frontend Team" },
+  { "staff_email": "alice.williams@example.com", "group_name": "DevOps Team" },
+  { "staff_email": "charlie.brown@example.com", "group_name": "QA Team" }
+]

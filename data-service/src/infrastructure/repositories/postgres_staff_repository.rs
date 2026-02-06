@@ -190,25 +190,4 @@ impl StaffRepository for PostgresStaffRepository {
 
         Ok(staff_list)
     }
-
-    async fn find_by_ids(&self, ids: Vec<Uuid>) -> DomainResult<Vec<Staff>> {
-        if ids.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        let staff_list = sqlx::query_as::<_, Staff>(
-            r#"
-            SELECT id, name, email, position, status, created_at, updated_at
-            FROM staff
-            WHERE id = ANY($1)
-            ORDER BY name
-            "#,
-        )
-        .bind(&ids)
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|e| DomainError::DatabaseError(e.to_string()))?;
-
-        Ok(staff_list)
-    }
 }

@@ -65,10 +65,6 @@ impl Rule for ShiftBalanceRule {
 
         Ok(())
     }
-
-    fn name(&self) -> &'static str {
-        "ShiftBalance"
-    }
 }
 
 #[cfg(test)]

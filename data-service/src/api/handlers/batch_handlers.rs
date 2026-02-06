@@ -1,11 +1,30 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use redis::AsyncCommands;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use shared::ApiResponse;
 use utoipa::ToSchema;
 
-use crate::api::requests::{CreateGroupRequest, CreateStaffRequest};
+use crate::api::requests::CreateGroupRequest;
+use crate::api::requests::CreateStaffRequest;
 use crate::api::state::AppState;
+
+const STAFF_JSON: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../sample-data/staff.json"));
+const GROUPS_JSON: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../sample-data/groups.json"));
+const MEMBERSHIPS_JSON: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../sample-data/memberships.json"));
+
+/// Deserialization struct for hierarchical group entries
+#[derive(Debug, Deserialize)]
+struct BatchGroupEntry {
+    name: String,
+    parent_name: Option<String>,
+}
+
+/// Deserialization struct for membership entries
+#[derive(Debug, Deserialize)]
+struct BatchMembershipEntry {
+    staff_email: String,
+    group_name: String,
+}
 
 /// Response for batch import operations
 #[derive(Debug, Serialize, ToSchema)]
@@ -13,6 +32,16 @@ pub struct BatchImportSerializer {
     pub success_count: usize,
     pub error_count: usize,
     pub errors: Vec<String>,
+}
+
+/// Delete all Redis keys matching a glob pattern (DEL does not support wildcards)
+async fn invalidate_cache_pattern(redis_conn: &mut redis::aio::ConnectionManager, pattern: &str) {
+    let keys: Result<Vec<String>, _> = redis_conn.keys(pattern).await;
+    if let Ok(keys) = keys {
+        for key in keys {
+            let _: Result<(), _> = redis_conn.del::<_, ()>(&key).await;
+        }
+    }
 }
 
 /// Batch import staff from sample-data/staff.json
@@ -28,17 +57,7 @@ pub struct BatchImportSerializer {
 pub async fn batch_import_staff(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    // Read the staff.json file from sample-data folder
-    let file_path = "sample-data/staff.json";
-    let file_content = tokio::fs::read_to_string(file_path).await.map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to read file: {}", e),
-        )
-    })?;
-
-    // Parse JSON
-    let staff_list: Vec<CreateStaffRequest> = serde_json::from_str(&file_content).map_err(|e| {
+    let staff_list: Vec<CreateStaffRequest> = serde_json::from_str(STAFF_JSON).map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Failed to parse JSON: {}", e),
@@ -61,7 +80,7 @@ pub async fn batch_import_staff(
 
     // Invalidate cache
     let mut redis_conn = state.redis_pool.clone();
-    let _: Result<(), _> = redis_conn.del("staff:list:*").await;
+    invalidate_cache_pattern(&mut redis_conn, "staff:*").await;
 
     let data = BatchImportSerializer {
         success_count,
@@ -75,12 +94,12 @@ pub async fn batch_import_staff(
     ))
 }
 
-/// Batch import groups from sample-data/groups.json
+/// Batch import groups from sample-data/groups.json (with hierarchical parent_name resolution)
 #[utoipa::path(
     post,
     path = "/api/v1/batch/groups",
     responses(
-        (status = 200, description = "Batch import completed", body = BatchImportSerializer),
+        (status = 200, description = "Batch import completed", body = ApiResponse<BatchImportSerializer>),
         (status = 500, description = "Internal server error")
     ),
     tag = "batch"
@@ -88,18 +107,114 @@ pub async fn batch_import_staff(
 pub async fn batch_import_groups(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    // Read the groups.json file from sample-data folder
-    let file_path = "sample-data/groups.json";
-    let file_content = tokio::fs::read_to_string(file_path).await.map_err(|e| {
+    let entries: Vec<BatchGroupEntry> = serde_json::from_str(GROUPS_JSON).map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to read file: {}", e),
+            format!("Failed to parse JSON: {}", e),
         )
     })?;
 
-    // Parse JSON
-    let groups_list: Vec<CreateGroupRequest> =
-        serde_json::from_str(&file_content).map_err(|e| {
+    let mut success_count = 0;
+    let mut error_count = 0;
+    let mut errors = Vec::new();
+
+    // Pass 1: Create all groups without parent_id
+    for entry in &entries {
+        let request = CreateGroupRequest {
+            name: entry.name.clone(),
+            parent_id: None,
+        };
+        match state.group_repo.create(request).await {
+            Ok(_) => success_count += 1,
+            Err(e) => {
+                error_count += 1;
+                errors.push(format!("Failed to create group '{}': {}", entry.name, e));
+            }
+        }
+    }
+
+    // Pass 2: For groups with parent_name, look up parent and update
+    for entry in &entries {
+        if let Some(parent_name) = &entry.parent_name {
+            let parent = match state.group_repo.find_by_name(parent_name).await {
+                Ok(Some(p)) => p,
+                Ok(None) => {
+                    error_count += 1;
+                    errors.push(format!(
+                        "Parent group '{}' not found for '{}'",
+                        parent_name, entry.name
+                    ));
+                    continue;
+                }
+                Err(e) => {
+                    error_count += 1;
+                    errors.push(format!(
+                        "Error looking up parent '{}': {}",
+                        parent_name, e
+                    ));
+                    continue;
+                }
+            };
+
+            let child = match state.group_repo.find_by_name(&entry.name).await {
+                Ok(Some(c)) => c,
+                Ok(None) => continue, // group creation failed in pass 1
+                Err(e) => {
+                    error_count += 1;
+                    errors.push(format!(
+                        "Error looking up group '{}': {}",
+                        entry.name, e
+                    ));
+                    continue;
+                }
+            };
+
+            let update_request = crate::api::requests::UpdateGroupRequest {
+                name: None,
+                parent_id: Some(parent.id),
+            };
+
+            if let Err(e) = state.group_repo.update(child.id, update_request).await {
+                error_count += 1;
+                errors.push(format!(
+                    "Failed to set parent for '{}': {}",
+                    entry.name, e
+                ));
+            }
+        }
+    }
+
+    // Invalidate cache
+    let mut redis_conn = state.redis_pool.clone();
+    invalidate_cache_pattern(&mut redis_conn, "group:*").await;
+
+    let data = BatchImportSerializer {
+        success_count,
+        error_count,
+        errors,
+    };
+
+    Ok((
+        StatusCode::OK,
+        Json(ApiResponse::success("Batch groups import completed", data)),
+    ))
+}
+
+/// Batch import memberships from sample-data/memberships.json
+#[utoipa::path(
+    post,
+    path = "/api/v1/batch/memberships",
+    responses(
+        (status = 200, description = "Batch import completed", body = ApiResponse<BatchImportSerializer>),
+        (status = 500, description = "Internal server error")
+    ),
+    tag = "batch"
+)]
+pub async fn batch_import_memberships(
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let entries: Vec<BatchMembershipEntry> =
+        serde_json::from_str(MEMBERSHIPS_JSON).map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 format!("Failed to parse JSON: {}", e),
@@ -110,25 +225,75 @@ pub async fn batch_import_groups(
     let mut error_count = 0;
     let mut errors = Vec::new();
 
-    for group_request in groups_list {
-        match state.group_repo.create(group_request).await {
+    for entry in &entries {
+        // Look up staff by email
+        let staff = match state.staff_repo.find_by_email(&entry.staff_email).await {
+            Ok(Some(s)) => s,
+            Ok(None) => {
+                error_count += 1;
+                errors.push(format!("Staff with email '{}' not found", entry.staff_email));
+                continue;
+            }
+            Err(e) => {
+                error_count += 1;
+                errors.push(format!(
+                    "Error looking up staff '{}': {}",
+                    entry.staff_email, e
+                ));
+                continue;
+            }
+        };
+
+        // Look up group by name
+        let group = match state.group_repo.find_by_name(&entry.group_name).await {
+            Ok(Some(g)) => g,
+            Ok(None) => {
+                error_count += 1;
+                errors.push(format!("Group '{}' not found", entry.group_name));
+                continue;
+            }
+            Err(e) => {
+                error_count += 1;
+                errors.push(format!(
+                    "Error looking up group '{}': {}",
+                    entry.group_name, e
+                ));
+                continue;
+            }
+        };
+
+        // Add membership
+        match state
+            .membership_repo
+            .add_member(staff.id, group.id)
+            .await
+        {
             Ok(_) => success_count += 1,
             Err(e) => {
                 error_count += 1;
-                errors.push(e.to_string());
+                errors.push(format!(
+                    "Failed to add '{}' to '{}': {}",
+                    entry.staff_email, entry.group_name, e
+                ));
             }
         }
     }
 
-    // Invalidate cache
+    // Invalidate resolved-members caches
     let mut redis_conn = state.redis_pool.clone();
-    let _: Result<(), _> = redis_conn.del("group:list:*").await;
+    invalidate_cache_pattern(&mut redis_conn, "group:resolved:*").await;
 
-    let response = BatchImportSerializer {
+    let data = BatchImportSerializer {
         success_count,
         error_count,
         errors,
     };
 
-    Ok((StatusCode::OK, Json(response)))
+    Ok((
+        StatusCode::OK,
+        Json(ApiResponse::success(
+            "Batch memberships import completed",
+            data,
+        )),
+    ))
 }

@@ -12,15 +12,4 @@ pub trait MembershipRepository: Send + Sync {
 
     /// Remove staff from group
     async fn remove_member(&self, staff_id: Uuid, group_id: Uuid) -> DomainResult<()>;
-
-    /// Get all memberships for a staff member
-    #[allow(dead_code)]
-    async fn find_by_staff_id(&self, staff_id: Uuid) -> DomainResult<Vec<GroupMembership>>;
-
-    /// Get all memberships for a group
-    async fn find_by_group_id(&self, group_id: Uuid) -> DomainResult<Vec<GroupMembership>>;
-
-    /// Check if staff is member of group
-    #[allow(dead_code)]
-    async fn is_member(&self, staff_id: Uuid, group_id: Uuid) -> DomainResult<bool>;
 }

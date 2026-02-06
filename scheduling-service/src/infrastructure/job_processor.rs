@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::domain::repositories::{ScheduleJobRepository, ShiftAssignmentRepository};
 use crate::infrastructure::http_client::DataServiceClient;
-use crate::infrastructure::scheduler::ScheduleGenerator;
+use crate::domain::schedule_generator::ScheduleGenerator;
 
 /// Message sent to the job processor
 #[derive(Debug)]

@@ -1,3 +1,4 @@
+version: '3.8'
 
 services:
   # PostgreSQL Database
@@ -72,11 +73,11 @@ services:
       APP__SERVER__PORT: 8081
       APP__DATABASE__URL: postgresql://postgres:postgres@postgresql:5432/scheduling_service_db
       APP__DATABASE__MAX_CONNECTIONS: 10
-      APP__DATA_SERVICE__URL: http://data-service:8080
-      APP__SCHEDULING_RULES__MIN_DAY_OFF_PER_WEEK: 1
-      APP__SCHEDULING_RULES__MAX_DAY_OFF_PER_WEEK: 2
-      APP__SCHEDULING_RULES__NO_MORNING_AFTER_EVENING: true
-      APP__SCHEDULING_RULES__MAX_DAILY_SHIFT_DIFF: 1
+      APP__DATA_SERVICE__HOST: data-service
+      APP__DATA_SERVICE__PORT: 8080
+      APP__SCHEDULING__MIN_DAYS_OFF_PER_WEEK: 1
+      APP__SCHEDULING__MAX_DAYS_OFF_PER_WEEK: 2
+      APP__SCHEDULING__MAX_DAILY_SHIFT_DIFFERENCE: 1
       RUST_LOG: scheduling_service=debug,tower_http=debug
     ports:
       - "8081:8081"

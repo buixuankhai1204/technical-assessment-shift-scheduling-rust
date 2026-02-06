@@ -38,6 +38,21 @@ pub async fn add_member(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
+    // Look up staff and group to populate enriched serializer
+    let staff = state
+        .staff_repo
+        .find_by_id(request.staff_id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .ok_or((StatusCode::NOT_FOUND, "Staff not found".to_string()))?;
+
+    let group = state
+        .group_repo
+        .find_by_id(group_id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+        .ok_or((StatusCode::NOT_FOUND, "Group not found".to_string()))?;
+
     // Invalidate cache for resolved members
     let mut redis_conn = state.redis_pool.clone();
     let _: Result<(), _> = redis_conn.del(format!("group:resolved:{}", group_id)).await;
@@ -46,7 +61,7 @@ pub async fn add_member(
         StatusCode::CREATED,
         Json(ApiResponse::success(
             "Member added successfully",
-            MembershipSerializer::from(membership),
+            MembershipSerializer::new(membership, &staff, &group),
         )),
     ))
 }

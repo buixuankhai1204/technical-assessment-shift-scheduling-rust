@@ -5,7 +5,7 @@ use axum::{
     Json,
 };
 use chrono::{Datelike, Utc};
-use shared::JobStatus;
+use shared::{ApiResponse, JobStatus};
 use uuid::Uuid;
 
 use crate::api::requests::CreateScheduleRequest;
@@ -13,8 +13,8 @@ use crate::api::state::AppState;
 use crate::domain::entities::ScheduleJob;
 use crate::infrastructure::ScheduleJobRequest;
 use crate::presentation::{
-    ScheduleJobSerialize, ScheduleResultSerialize, ScheduleStatusSerialize,
-    ShiftAssignmentSerialize,
+    ScheduleJobSerializer, ScheduleResultSerializer, ScheduleStatusSerializer,
+    ShiftAssignmentSerializer,
 };
 
 /// Submit a new schedule job
@@ -23,7 +23,7 @@ use crate::presentation::{
     path = "/api/v1/schedules",
     request_body = CreateScheduleRequest,
     responses(
-        (status = 202, description = "Schedule job accepted for processing", body = ScheduleJobSerialize),
+        (status = 202, description = "Schedule job accepted for processing", body = ApiResponse<ScheduleJobSerializer>),
         (status = 400, description = "Invalid request"),
         (status = 500, description = "Internal server error")
     ),
@@ -81,9 +81,13 @@ pub async fn submit_schedule(
             )
         })?;
 
-    let response = ScheduleJobSerialize::from(created_job);
-
-    Ok((StatusCode::ACCEPTED, Json(response)))
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(ApiResponse::success(
+            "Schedule job accepted for processing",
+            ScheduleJobSerializer::from(created_job),
+        )),
+    ))
 }
 
 /// Get schedule job status
@@ -94,7 +98,7 @@ pub async fn submit_schedule(
         ("schedule_id" = Uuid, Path, description = "Schedule job ID")
     ),
     responses(
-        (status = 200, description = "Schedule status retrieved", body = ScheduleStatusSerialize),
+        (status = 200, description = "Schedule status retrieved", body = ApiResponse<ScheduleStatusSerializer>),
         (status = 404, description = "Schedule not found"),
         (status = 500, description = "Internal server error")
     ),
@@ -111,9 +115,13 @@ pub async fn get_schedule_status(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .ok_or((StatusCode::NOT_FOUND, "Schedule not found".to_string()))?;
 
-    let response = ScheduleStatusSerialize::from(job);
-
-    Ok((StatusCode::OK, Json(response)))
+    Ok((
+        StatusCode::OK,
+        Json(ApiResponse::success(
+            "Schedule status retrieved successfully",
+            ScheduleStatusSerializer::from(job),
+        )),
+    ))
 }
 
 /// Get schedule result
@@ -124,7 +132,7 @@ pub async fn get_schedule_status(
         ("schedule_id" = Uuid, Path, description = "Schedule job ID")
     ),
     responses(
-        (status = 200, description = "Schedule result retrieved", body = ScheduleResultSerialize),
+        (status = 200, description = "Schedule result retrieved", body = ApiResponse<ScheduleResultSerializer>),
         (status = 404, description = "Schedule not found"),
         (status = 400, description = "Schedule not completed yet"),
         (status = 500, description = "Internal server error")
@@ -161,15 +169,21 @@ pub async fn get_schedule_result(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let assignment_responses: Vec<ShiftAssignmentSerialize> =
+    let assignment_responses: Vec<ShiftAssignmentSerializer> =
         assignments.into_iter().map(|a| a.into()).collect();
 
-    let response = ScheduleResultSerialize {
+    let data = ScheduleResultSerializer {
         schedule_id: job.id,
         period_begin_date: job.period_begin_date,
         staff_group_id: job.staff_group_id,
         assignments: assignment_responses,
     };
 
-    Ok((StatusCode::OK, Json(response)))
+    Ok((
+        StatusCode::OK,
+        Json(ApiResponse::success(
+            "Schedule result retrieved successfully",
+            data,
+        )),
+    ))
 }

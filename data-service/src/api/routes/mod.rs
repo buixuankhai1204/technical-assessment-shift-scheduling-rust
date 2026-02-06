@@ -36,13 +36,20 @@ use crate::api::{handlers, state::AppState};
         // Batch import endpoints
         handlers::batch_handlers::batch_import_staff,
         handlers::batch_handlers::batch_import_groups,
+        handlers::batch_handlers::batch_import_memberships,
     ),
     components(schemas(
         // Shared types
         shared::StaffStatus,
         shared::PaginationParams,
-        shared::PaginatedResponse<crate::presentation::StaffSerializer>,
-        shared::PaginatedResponse<crate::presentation::GroupSerializer>,
+        // ApiResponse variants
+        shared::ApiResponse<crate::presentation::StaffSerializer>,
+        shared::ApiResponse<Vec<crate::presentation::StaffSerializer>>,
+        shared::ApiResponse<crate::presentation::GroupSerializer>,
+        shared::ApiResponse<Vec<crate::presentation::GroupSerializer>>,
+        shared::ApiResponse<crate::presentation::MembershipSerializer>,
+        shared::ApiResponse<Vec<crate::presentation::ResolvedGroupSerializer>>,
+        shared::ApiResponse<crate::api::handlers::batch_handlers::BatchImportSerializer>,
         // Staff schemas
         crate::domain::entities::Staff,
         crate::presentation::StaffSerializer,
@@ -57,6 +64,8 @@ use crate::api::{handlers, state::AppState};
         crate::domain::entities::GroupMembership,
         crate::presentation::MembershipSerializer,
         crate::api::requests::AddMemberRequest,
+        // Resolved group schemas
+        crate::presentation::ResolvedGroupSerializer,
         // Batch import schemas
         crate::api::handlers::batch_handlers::BatchImportSerializer,
     )),
@@ -116,6 +125,10 @@ pub fn create_router(app_state: AppState) -> Router {
         .route(
             "/batch/groups",
             post(handlers::batch_handlers::batch_import_groups),
+        )
+        .route(
+            "/batch/memberships",
+            post(handlers::batch_handlers::batch_import_memberships),
         );
 
     let api_router = Router::new()

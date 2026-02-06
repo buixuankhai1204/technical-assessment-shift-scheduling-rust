@@ -59,10 +59,6 @@ impl Rule for MaxDaysOffRule {
 
         Ok(())
     }
-
-    fn name(&self) -> &'static str {
-        "MaxDaysOff"
-    }
 }
 
 #[cfg(test)]

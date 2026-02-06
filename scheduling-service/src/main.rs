@@ -11,12 +11,13 @@ use api::AppState;
 use domain::rules::{
     MaxDaysOffRule, MinDaysOffRule, NoMorningAfterEveningRule, Rule, ShiftBalanceRule,
 };
+use domain::schedule_generator::ScheduleGenerator;
 use infrastructure::{
     config::Settings,
     database,
     http_client::DataServiceClient,
     repositories::{PostgresScheduleJobRepository, PostgresShiftAssignmentRepository},
-    JobProcessor, ScheduleGenerator,
+    JobProcessor,
 };
 
 #[tokio::main]

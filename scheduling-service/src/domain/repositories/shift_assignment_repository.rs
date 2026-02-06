@@ -12,8 +12,4 @@ pub trait ShiftAssignmentRepository: Send + Sync {
 
     /// Find all assignments for a schedule job
     async fn find_by_job_id(&self, job_id: Uuid) -> DomainResult<Vec<ShiftAssignment>>;
-
-    /// Delete all assignments for a job
-    #[allow(dead_code)]
-    async fn delete_by_job_id(&self, job_id: Uuid) -> DomainResult<()>;
 }

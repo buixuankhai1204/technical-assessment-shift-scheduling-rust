@@ -3,7 +3,7 @@ use shared::{DomainResult, PaginationParams};
 use uuid::Uuid;
 
 use crate::api::requests::{CreateGroupRequest, UpdateGroupRequest};
-use crate::domain::entities::StaffGroup;
+use crate::domain::entities::{GroupWithMembers, StaffGroup};
 
 /// Repository trait for StaffGroup operations
 #[async_trait]
@@ -17,16 +17,19 @@ pub trait GroupRepository: Send + Sync {
     /// List all groups with pagination
     async fn list(&self, params: PaginationParams) -> DomainResult<(Vec<StaffGroup>, u64)>;
 
-    /// List child groups by parent ID
-    #[allow(dead_code)]
-    async fn list_by_parent_id(&self, parent_id: Uuid) -> DomainResult<Vec<StaffGroup>>;
-
     /// Update group by ID
     async fn update(&self, id: Uuid, request: UpdateGroupRequest) -> DomainResult<StaffGroup>;
 
     /// Delete group by ID
     async fn delete(&self, id: Uuid) -> DomainResult<()>;
 
-    /// Get all descendant group IDs (recursive)
-    async fn get_descendant_ids(&self, group_id: Uuid) -> DomainResult<Vec<Uuid>>;
+    /// Find group by name
+    async fn find_by_name(&self, name: &str) -> DomainResult<Option<StaffGroup>>;
+
+    /// Get all members in a group hierarchy, grouped by subgroup.
+    /// Returns (groups_with_members, total_unique_active_members).
+    async fn get_resolved_members(
+        &self,
+        group_id: Uuid,
+    ) -> DomainResult<(Vec<GroupWithMembers>, u64)>;
 }

@@ -14,6 +14,16 @@ use crate::presentation::StaffSerializer;
 
 const STAFF_CACHE_TTL: u64 = 300; // 5 minutes
 
+/// Delete all Redis keys matching a glob pattern (DEL does not support wildcards)
+async fn invalidate_cache_pattern(redis_conn: &mut redis::aio::ConnectionManager, pattern: &str) {
+    let keys: Result<Vec<String>, _> = redis_conn.keys(pattern).await;
+    if let Ok(keys) = keys {
+        for key in keys {
+            let _: Result<(), _> = redis_conn.del::<_, ()>(&key).await;
+        }
+    }
+}
+
 /// Create a new staff member
 #[utoipa::path(
     post,
@@ -38,7 +48,7 @@ pub async fn create_staff(
 
     // Invalidate cache
     let mut redis_conn = state.redis_pool.clone();
-    let _: Result<(), _> = redis_conn.del("staff:list:*").await;
+    invalidate_cache_pattern(&mut redis_conn, "staff:list:*").await;
 
     Ok((
         StatusCode::CREATED,
@@ -187,7 +197,7 @@ pub async fn update_staff(
     let mut redis_conn = state.redis_pool.clone();
     let cache_key = format!("staff:id:{}", id);
     let _: Result<(), _> = redis_conn.del(&cache_key).await;
-    let _: Result<(), _> = redis_conn.del("staff:list:*").await;
+    invalidate_cache_pattern(&mut redis_conn, "staff:list:*").await;
 
     Ok((
         StatusCode::OK,
@@ -225,7 +235,7 @@ pub async fn delete_staff(
     let mut redis_conn = state.redis_pool.clone();
     let cache_key = format!("staff:id:{}", id);
     let _: Result<(), _> = redis_conn.del(&cache_key).await;
-    let _: Result<(), _> = redis_conn.del("staff:list:*").await;
+    invalidate_cache_pattern(&mut redis_conn, "staff:list:*").await;
 
     Ok(StatusCode::NO_CONTENT)
 }

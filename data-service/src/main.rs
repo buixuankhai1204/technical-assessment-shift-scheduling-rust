@@ -15,7 +15,6 @@ use infrastructure::{
     repositories::{
         PostgresGroupRepository, PostgresMembershipRepository, PostgresStaffRepository,
     },
-    GroupService,
 };
 
 #[tokio::main]
@@ -58,21 +57,11 @@ async fn main() -> Result<()> {
 
     tracing::info!("Repositories initialized");
 
-    // Initialize services
-    let group_service = Arc::new(GroupService::new(
-        group_repo.clone(),
-        staff_repo.clone(),
-        membership_repo.clone(),
-    ));
-
-    tracing::info!("Services initialized");
-
     // Create application state
     let app_state = AppState::new(
         staff_repo,
         group_repo,
         membership_repo,
-        group_service,
         redis_pool,
     );
 

@@ -1,22 +1,7 @@
 [
-  {
-    "name": "Engineering Department",
-    "parent_id": null
-  },
-  {
-    "name": "Backend Team",
-    "parent_id": null
-  },
-  {
-    "name": "Frontend Team",
-    "parent_id": null
-  },
-  {
-    "name": "DevOps Team",
-    "parent_id": null
-  },
-  {
-    "name": "QA Team",
-    "parent_id": null
-  }
+  { "name": "Engineering Department", "parent_name": null },
+  { "name": "Backend Team", "parent_name": "Engineering Department" },
+  { "name": "Frontend Team", "parent_name": "Engineering Department" },
+  { "name": "DevOps Team", "parent_name": "Engineering Department" },
+  { "name": "QA Team", "parent_name": "Engineering Department" }
 ]

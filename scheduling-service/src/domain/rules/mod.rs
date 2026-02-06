@@ -30,8 +30,4 @@ pub struct AssignmentContext {
 pub trait Rule: Send + Sync {
     /// Check if the assignment violates this rule
     fn validate(&self, context: &AssignmentContext) -> DomainResult<()>;
-
-    /// Get rule name for logging
-    #[allow(dead_code)]
-    fn name(&self) -> &'static str;
 }

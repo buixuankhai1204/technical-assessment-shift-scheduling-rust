@@ -58,10 +58,6 @@ impl Rule for NoMorningAfterEveningRule {
 
         Ok(())
     }
-
-    fn name(&self) -> &'static str {
-        "NoMorningAfterEvening"
-    }
 }
 
 #[cfg(test)]

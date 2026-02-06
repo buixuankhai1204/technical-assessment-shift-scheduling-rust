@@ -72,19 +72,4 @@ impl ShiftAssignmentRepository for PostgresShiftAssignmentRepository {
 
         Ok(assignments)
     }
-
-    async fn delete_by_job_id(&self, job_id: Uuid) -> DomainResult<()> {
-        sqlx::query(
-            r#"
-            DELETE FROM shift_assignments
-            WHERE schedule_job_id = $1
-            "#,
-        )
-        .bind(job_id)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| DomainError::DatabaseError(e.to_string()))?;
-
-        Ok(())
-    }
 }

@@ -75,10 +75,6 @@ impl Rule for MinDaysOffRule {
 
         Ok(())
     }
-
-    fn name(&self) -> &'static str {
-        "MinDaysOff"
-    }
 }
 
 #[cfg(test)]

@@ -21,7 +21,7 @@ docker-compose.yml
 .dockerignore
 
 # Sample data
-sample-data/
+# sample-data/ is needed at compile time for include_str!
 
 # PDF
 *.pdf
