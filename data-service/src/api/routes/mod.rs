@@ -41,33 +41,30 @@ use crate::api::{handlers, state::AppState};
         // Shared types
         shared::StaffStatus,
         shared::PaginationParams,
-        shared::PaginatedResponse<crate::domain::entities::StaffResponse>,
-        shared::PaginatedResponse<crate::domain::entities::GroupResponse>,
+        shared::PaginatedResponse<crate::presentation::StaffSerializer>,
+        shared::PaginatedResponse<crate::presentation::GroupSerializer>,
         // Staff schemas
         crate::domain::entities::Staff,
-        crate::domain::entities::StaffResponse,
-        crate::domain::entities::CreateStaffRequest,
-        crate::domain::entities::UpdateStaffRequest,
+        crate::presentation::StaffSerializer,
+        crate::api::requests::CreateStaffRequest,
+        crate::api::requests::UpdateStaffRequest,
         // Group schemas
         crate::domain::entities::StaffGroup,
-        crate::domain::entities::GroupResponse,
-        crate::domain::entities::CreateGroupRequest,
-        crate::domain::entities::UpdateGroupRequest,
+        crate::presentation::GroupSerializer,
+        crate::api::requests::CreateGroupRequest,
+        crate::api::requests::UpdateGroupRequest,
         // Membership schemas
         crate::domain::entities::GroupMembership,
-        crate::domain::entities::MembershipResponse,
-        crate::domain::entities::AddMemberRequest,
-        crate::domain::entities::RemoveMemberRequest,
+        crate::presentation::MembershipSerializer,
+        crate::api::requests::AddMemberRequest,
         // Batch import schemas
-        crate::api::handlers::batch_handlers::BatchImportStaffRequest,
-        crate::api::handlers::batch_handlers::BatchImportGroupsRequest,
-        crate::api::handlers::batch_handlers::BatchImportResponse,
+        crate::api::handlers::batch_handlers::BatchImportSerializer,
     )),
     tags(
         (name = "staff", description = "Staff management endpoints"),
         (name = "groups", description = "Group management endpoints"),
         (name = "memberships", description = "Group membership management endpoints"),
-        (name = "batch", description = "Batch import endpoints")
+        (name = "batch", description = "Batch import endpoints from sample-data files")
     )
 )]
 struct ApiDoc;

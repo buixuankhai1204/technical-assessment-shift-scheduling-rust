@@ -9,8 +9,8 @@ use utoipa_swagger_ui::SwaggerUi;
 use crate::api::handlers;
 use crate::api::state::AppState;
 use crate::presentation::{
-    CreateScheduleRequest, ScheduleJobSerialize, ScheduleResultSerialize,
-    ScheduleStatusSerialize, ShiftAssignmentSerialize,
+    ScheduleJobSerialize, ScheduleResultSerialize, ScheduleStatusSerialize,
+    ShiftAssignmentSerialize,
 };
 use shared::{JobStatus, ShiftType};
 
@@ -27,7 +27,7 @@ use shared::{JobStatus, ShiftType};
         crate::api::handlers::schedule_handlers::get_schedule_result,
     ),
     components(schemas(
-        CreateScheduleRequest,
+        crate::api::requests::CreateScheduleRequest,
         ScheduleJobSerialize,
         ScheduleStatusSerialize,
         ScheduleResultSerialize,

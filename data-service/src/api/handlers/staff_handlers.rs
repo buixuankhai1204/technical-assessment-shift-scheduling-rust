@@ -5,11 +5,12 @@ use axum::{
     Json,
 };
 use redis::AsyncCommands;
-use shared::{DomainError, PaginatedResponse, PaginationParams};
+use shared::{ApiResponse, DomainError, PaginationParams};
 use uuid::Uuid;
 
+use crate::api::requests::{CreateStaffRequest, UpdateStaffRequest};
 use crate::api::state::AppState;
-use crate::presentation::{CreateStaffRequest, StaffResponse, UpdateStaffRequest};
+use crate::presentation::StaffSerializer;
 
 const STAFF_CACHE_TTL: u64 = 300; // 5 minutes
 
@@ -19,7 +20,7 @@ const STAFF_CACHE_TTL: u64 = 300; // 5 minutes
     path = "/api/v1/staff",
     request_body = CreateStaffRequest,
     responses(
-        (status = 201, description = "Staff created successfully", body = StaffResponse),
+        (status = 201, description = "Staff created successfully", body = ApiResponse<StaffSerializer>),
         (status = 400, description = "Bad request"),
         (status = 500, description = "Internal server error")
     ),
@@ -39,7 +40,13 @@ pub async fn create_staff(
     let mut redis_conn = state.redis_pool.clone();
     let _: Result<(), _> = redis_conn.del("staff:list:*").await;
 
-    Ok((StatusCode::CREATED, Json(StaffResponse::from(staff))))
+    Ok((
+        StatusCode::CREATED,
+        Json(ApiResponse::success(
+            "Staff created successfully",
+            StaffSerializer::from(staff),
+        )),
+    ))
 }
 
 /// Get staff by ID
@@ -50,7 +57,7 @@ pub async fn create_staff(
         ("id" = Uuid, Path, description = "Staff ID")
     ),
     responses(
-        (status = 200, description = "Staff found", body = StaffResponse),
+        (status = 200, description = "Staff found", body = ApiResponse<StaffSerializer>),
         (status = 404, description = "Staff not found"),
         (status = 500, description = "Internal server error")
     ),
@@ -66,7 +73,9 @@ pub async fn get_staff_by_id(
     // Try cache first
     let cached: Result<String, _> = redis_conn.get(&cache_key).await;
     if let Ok(cached_data) = cached {
-        if let Ok(staff_response) = serde_json::from_str::<StaffResponse>(&cached_data) {
+        if let Ok(staff_response) =
+            serde_json::from_str::<ApiResponse<StaffSerializer>>(&cached_data)
+        {
             return Ok((StatusCode::OK, Json(staff_response)));
         }
     }
@@ -79,7 +88,7 @@ pub async fn get_staff_by_id(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .ok_or((StatusCode::NOT_FOUND, "Staff not found".to_string()))?;
 
-    let response = StaffResponse::from(staff);
+    let response = ApiResponse::success("Staff retrieved successfully", StaffSerializer::from(staff));
 
     // Cache the result
     let _: Result<(), _> = redis_conn
@@ -99,7 +108,7 @@ pub async fn get_staff_by_id(
     path = "/api/v1/staff",
     params(PaginationParams),
     responses(
-        (status = 200, description = "Staff list", body = PaginatedResponse<StaffResponse>),
+        (status = 200, description = "Staff list", body = ApiResponse<Vec<StaffSerializer>>),
         (status = 500, description = "Internal server error")
     ),
     tag = "staff"
@@ -114,7 +123,8 @@ pub async fn list_staff(
     // Try cache first
     let cached: Result<String, _> = redis_conn.get(&cache_key).await;
     if let Ok(cached_data) = cached {
-        if let Ok(response) = serde_json::from_str::<PaginatedResponse<StaffResponse>>(&cached_data)
+        if let Ok(response) =
+            serde_json::from_str::<ApiResponse<Vec<StaffSerializer>>>(&cached_data)
         {
             return Ok((StatusCode::OK, Json(response)));
         }
@@ -127,12 +137,10 @@ pub async fn list_staff(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let response = PaginatedResponse::new(
-        staff_list.into_iter().map(StaffResponse::from).collect(),
-        params.page,
-        params.page_size,
-        total,
-    );
+    let serialized: Vec<StaffSerializer> =
+        staff_list.into_iter().map(StaffSerializer::from).collect();
+
+    let response = ApiResponse::with_total("Staff list retrieved successfully", serialized, total);
 
     // Cache the result
     let _: Result<(), _> = redis_conn
@@ -155,7 +163,7 @@ pub async fn list_staff(
     ),
     request_body = UpdateStaffRequest,
     responses(
-        (status = 200, description = "Staff updated successfully", body = StaffResponse),
+        (status = 200, description = "Staff updated successfully", body = ApiResponse<StaffSerializer>),
         (status = 404, description = "Staff not found"),
         (status = 500, description = "Internal server error")
     ),
@@ -181,7 +189,13 @@ pub async fn update_staff(
     let _: Result<(), _> = redis_conn.del(&cache_key).await;
     let _: Result<(), _> = redis_conn.del("staff:list:*").await;
 
-    Ok((StatusCode::OK, Json(StaffResponse::from(staff))))
+    Ok((
+        StatusCode::OK,
+        Json(ApiResponse::success(
+            "Staff updated successfully",
+            StaffSerializer::from(staff),
+        )),
+    ))
 }
 
 /// Delete staff by ID

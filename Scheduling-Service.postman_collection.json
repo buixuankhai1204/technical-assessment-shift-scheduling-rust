@@ -1,0 +1,85 @@
+{
+	"info": {
+		"_postman_id": "scheduling-service-collection",
+		"name": "Scheduling Service API",
+		"description": "Asynchronous shift schedule generation API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8081",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Schedules",
+			"item": [
+				{
+					"name": "Submit Schedule Job",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"staff_group_id\": \"{{group_id}}\",\n  \"period_begin_date\": \"2026-02-10\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/schedules",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "schedules"]
+						},
+						"description": "Submit a new schedule job. The period_begin_date must be a Monday."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Schedule Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/schedules/:schedule_id/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "schedules", ":schedule_id", "status"],
+							"variable": [
+								{
+									"key": "schedule_id",
+									"value": "{{schedule_id}}"
+								}
+							]
+						},
+						"description": "Get the current status of a schedule job (Pending, Processing, Completed, Failed)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Schedule Result",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/schedules/:schedule_id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "schedules", ":schedule_id"],
+							"variable": [
+								{
+									"key": "schedule_id",
+									"value": "{{schedule_id}}"
+								}
+							]
+						},
+						"description": "Get the complete schedule result with all shift assignments."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

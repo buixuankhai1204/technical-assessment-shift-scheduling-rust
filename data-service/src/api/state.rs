@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use crate::domain::repositories::{GroupRepository, MembershipRepository, StaffRepository};
-use crate::domain::services::GroupService;
-use crate::infrastructure::redis::RedisPool;
+use crate::infrastructure::{redis::RedisPool, GroupService};
 
 /// Application state shared across all handlers
 #[derive(Clone)]

@@ -5,28 +5,16 @@ use uuid::Uuid;
 
 use crate::domain::entities::GroupMembership;
 
-/// Request to add staff to group
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct AddMemberRequest {
-    pub staff_id: Uuid,
-}
-
-/// Request to remove staff from group
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct RemoveMemberRequest {
-    pub staff_id: Uuid,
-}
-
-/// Membership response DTO
+/// Membership serializer DTO
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct MembershipResponse {
+pub struct MembershipSerializer {
     pub id: Uuid,
     pub staff_id: Uuid,
     pub group_id: Uuid,
     pub created_at: DateTime<Utc>,
 }
 
-impl From<GroupMembership> for MembershipResponse {
+impl From<GroupMembership> for MembershipSerializer {
     fn from(membership: GroupMembership) -> Self {
         Self {
             id: membership.id,

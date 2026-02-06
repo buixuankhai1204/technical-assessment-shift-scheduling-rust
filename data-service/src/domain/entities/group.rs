@@ -2,10 +2,11 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use shared::{Identifiable, Timestamped};
 use sqlx::FromRow;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// Staff group entity with hierarchical support
-#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow, ToSchema)]
 pub struct StaffGroup {
     pub id: Uuid,
     pub name: String,

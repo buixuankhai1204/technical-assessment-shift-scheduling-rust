@@ -42,7 +42,10 @@ impl JobProcessor {
     /// Start the background processor
     pub fn start(
         self: Arc<Self>,
-    ) -> (mpsc::Sender<ScheduleJobRequest>, tokio::task::JoinHandle<()>) {
+    ) -> (
+        mpsc::Sender<ScheduleJobRequest>,
+        tokio::task::JoinHandle<()>,
+    ) {
         let (tx, mut rx) = mpsc::channel::<ScheduleJobRequest>(100);
 
         let handle = tokio::spawn(async move {

@@ -3,7 +3,8 @@ use shared::{DomainError, DomainResult, PaginationParams};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::domain::entities::{CreateGroupRequest, StaffGroup, UpdateGroupRequest};
+use crate::api::requests::{CreateGroupRequest, UpdateGroupRequest};
+use crate::domain::entities::StaffGroup;
 use crate::domain::repositories::GroupRepository;
 
 pub struct PostgresGroupRepository {

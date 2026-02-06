@@ -92,13 +92,17 @@ mod tests {
         let rule = MinDaysOffRule::new(2);
         let staff_id = Uuid::new_v4();
         let monday = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
-        let sunday = monday.checked_add_signed(chrono::Duration::days(6)).unwrap();
+        let sunday = monday
+            .checked_add_signed(chrono::Duration::days(6))
+            .unwrap();
 
         // Staff has worked all days except Sunday
         let mut assignments = HashMap::new();
         let mut staff_assignments = HashMap::new();
         for day_offset in 0..6 {
-            let date = monday.checked_add_signed(chrono::Duration::days(day_offset)).unwrap();
+            let date = monday
+                .checked_add_signed(chrono::Duration::days(day_offset))
+                .unwrap();
             staff_assignments.insert(date, ShiftType::Morning);
         }
         assignments.insert(staff_id, staff_assignments);

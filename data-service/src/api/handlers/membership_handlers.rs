@@ -5,11 +5,12 @@ use axum::{
     Json,
 };
 use redis::AsyncCommands;
-use shared::DomainError;
+use shared::{ApiResponse, DomainError};
 use uuid::Uuid;
 
+use crate::api::requests::AddMemberRequest;
 use crate::api::state::AppState;
-use crate::presentation::{AddMemberRequest, MembershipResponse};
+use crate::presentation::{MembershipSerializer, StaffSerializer};
 
 /// Add staff to group
 #[utoipa::path(
@@ -20,7 +21,7 @@ use crate::presentation::{AddMemberRequest, MembershipResponse};
     ),
     request_body = AddMemberRequest,
     responses(
-        (status = 201, description = "Member added successfully", body = MembershipResponse),
+        (status = 201, description = "Member added successfully", body = ApiResponse<MembershipSerializer>),
         (status = 400, description = "Bad request"),
         (status = 500, description = "Internal server error")
     ),
@@ -43,7 +44,10 @@ pub async fn add_member(
 
     Ok((
         StatusCode::CREATED,
-        Json(MembershipResponse::from(membership)),
+        Json(ApiResponse::success(
+            "Member added successfully",
+            MembershipSerializer::from(membership),
+        )),
     ))
 }
 
@@ -90,7 +94,7 @@ pub async fn remove_member(
         ("group_id" = Uuid, Path, description = "Group ID")
     ),
     responses(
-        (status = 200, description = "Group members", body = Vec<crate::domain::entities::StaffResponse>),
+        (status = 200, description = "Group members", body = ApiResponse<Vec<StaffSerializer>>),
         (status = 500, description = "Internal server error")
     ),
     tag = "memberships"
@@ -105,10 +109,16 @@ pub async fn get_group_members(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let response: Vec<crate::domain::entities::StaffResponse> = staff_list
-        .into_iter()
-        .map(crate::domain::entities::StaffResponse::from)
-        .collect();
+    let serialized: Vec<StaffSerializer> =
+        staff_list.into_iter().map(StaffSerializer::from).collect();
+    let total = serialized.len() as u64;
 
-    Ok((StatusCode::OK, Json(response)))
+    Ok((
+        StatusCode::OK,
+        Json(ApiResponse::with_total(
+            "Group members retrieved successfully",
+            serialized,
+            total,
+        )),
+    ))
 }

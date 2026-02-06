@@ -76,7 +76,9 @@ mod tests {
         let rule = MaxDaysOffRule::new(2);
         let staff_id = Uuid::new_v4();
         let monday = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
-        let wednesday = monday.checked_add_signed(chrono::Duration::days(2)).unwrap();
+        let wednesday = monday
+            .checked_add_signed(chrono::Duration::days(2))
+            .unwrap();
 
         // Staff already has 2 days off
         let mut assignments = HashMap::new();

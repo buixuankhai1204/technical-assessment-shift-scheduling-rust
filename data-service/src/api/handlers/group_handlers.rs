@@ -5,11 +5,12 @@ use axum::{
     Json,
 };
 use redis::AsyncCommands;
-use shared::{DomainError, PaginatedResponse, PaginationParams};
+use shared::{ApiResponse, DomainError, PaginationParams};
 use uuid::Uuid;
 
+use crate::api::requests::{CreateGroupRequest, UpdateGroupRequest};
 use crate::api::state::AppState;
-use crate::presentation::{CreateGroupRequest, GroupResponse, UpdateGroupRequest};
+use crate::presentation::{GroupSerializer, StaffSerializer};
 
 const GROUP_CACHE_TTL: u64 = 300; // 5 minutes
 
@@ -19,7 +20,7 @@ const GROUP_CACHE_TTL: u64 = 300; // 5 minutes
     path = "/api/v1/groups",
     request_body = CreateGroupRequest,
     responses(
-        (status = 201, description = "Group created successfully", body = GroupResponse),
+        (status = 201, description = "Group created successfully", body = ApiResponse<GroupSerializer>),
         (status = 400, description = "Bad request"),
         (status = 500, description = "Internal server error")
     ),
@@ -39,7 +40,13 @@ pub async fn create_group(
     let mut redis_conn = state.redis_pool.clone();
     let _: Result<(), _> = redis_conn.del("group:list:*").await;
 
-    Ok((StatusCode::CREATED, Json(GroupResponse::from(group))))
+    Ok((
+        StatusCode::CREATED,
+        Json(ApiResponse::success(
+            "Group created successfully",
+            GroupSerializer::from(group),
+        )),
+    ))
 }
 
 /// Get group by ID
@@ -50,7 +57,7 @@ pub async fn create_group(
         ("id" = Uuid, Path, description = "Group ID")
     ),
     responses(
-        (status = 200, description = "Group found", body = GroupResponse),
+        (status = 200, description = "Group found", body = ApiResponse<GroupSerializer>),
         (status = 404, description = "Group not found"),
         (status = 500, description = "Internal server error")
     ),
@@ -66,7 +73,9 @@ pub async fn get_group_by_id(
     // Try cache first
     let cached: Result<String, _> = redis_conn.get(&cache_key).await;
     if let Ok(cached_data) = cached {
-        if let Ok(group_response) = serde_json::from_str::<GroupResponse>(&cached_data) {
+        if let Ok(group_response) =
+            serde_json::from_str::<ApiResponse<GroupSerializer>>(&cached_data)
+        {
             return Ok((StatusCode::OK, Json(group_response)));
         }
     }
@@ -79,7 +88,7 @@ pub async fn get_group_by_id(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .ok_or((StatusCode::NOT_FOUND, "Group not found".to_string()))?;
 
-    let response = GroupResponse::from(group);
+    let response = ApiResponse::success("Group retrieved successfully", GroupSerializer::from(group));
 
     // Cache the result
     let _: Result<(), _> = redis_conn
@@ -99,7 +108,7 @@ pub async fn get_group_by_id(
     path = "/api/v1/groups",
     params(PaginationParams),
     responses(
-        (status = 200, description = "Group list", body = PaginatedResponse<GroupResponse>),
+        (status = 200, description = "Group list", body = ApiResponse<Vec<GroupSerializer>>),
         (status = 500, description = "Internal server error")
     ),
     tag = "groups"
@@ -114,7 +123,8 @@ pub async fn list_groups(
     // Try cache first
     let cached: Result<String, _> = redis_conn.get(&cache_key).await;
     if let Ok(cached_data) = cached {
-        if let Ok(response) = serde_json::from_str::<PaginatedResponse<GroupResponse>>(&cached_data)
+        if let Ok(response) =
+            serde_json::from_str::<ApiResponse<Vec<GroupSerializer>>>(&cached_data)
         {
             return Ok((StatusCode::OK, Json(response)));
         }
@@ -127,12 +137,10 @@ pub async fn list_groups(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let response = PaginatedResponse::new(
-        groups.into_iter().map(GroupResponse::from).collect(),
-        params.page,
-        params.page_size,
-        total,
-    );
+    let serialized: Vec<GroupSerializer> =
+        groups.into_iter().map(GroupSerializer::from).collect();
+
+    let response = ApiResponse::with_total("Group list retrieved successfully", serialized, total);
 
     // Cache the result
     let _: Result<(), _> = redis_conn
@@ -155,7 +163,7 @@ pub async fn list_groups(
     ),
     request_body = UpdateGroupRequest,
     responses(
-        (status = 200, description = "Group updated successfully", body = GroupResponse),
+        (status = 200, description = "Group updated successfully", body = ApiResponse<GroupSerializer>),
         (status = 404, description = "Group not found"),
         (status = 500, description = "Internal server error")
     ),
@@ -182,7 +190,13 @@ pub async fn update_group(
     let _: Result<(), _> = redis_conn.del("group:list:*").await;
     let _: Result<(), _> = redis_conn.del(format!("group:resolved:{}", id)).await;
 
-    Ok((StatusCode::OK, Json(GroupResponse::from(group))))
+    Ok((
+        StatusCode::OK,
+        Json(ApiResponse::success(
+            "Group updated successfully",
+            GroupSerializer::from(group),
+        )),
+    ))
 }
 
 /// Delete group by ID
@@ -226,7 +240,7 @@ pub async fn delete_group(
         ("id" = Uuid, Path, description = "Group ID")
     ),
     responses(
-        (status = 200, description = "Resolved members", body = Vec<crate::domain::entities::StaffResponse>),
+        (status = 200, description = "Resolved members", body = ApiResponse<Vec<StaffSerializer>>),
         (status = 404, description = "Group not found"),
         (status = 500, description = "Internal server error")
     ),
@@ -242,10 +256,10 @@ pub async fn get_resolved_members(
     // Try cache first
     let cached: Result<String, _> = redis_conn.get(&cache_key).await;
     if let Ok(cached_data) = cached {
-        if let Ok(staff_list) =
-            serde_json::from_str::<Vec<crate::domain::entities::StaffResponse>>(&cached_data)
+        if let Ok(response) =
+            serde_json::from_str::<ApiResponse<Vec<StaffSerializer>>>(&cached_data)
         {
-            return Ok((StatusCode::OK, Json(staff_list)));
+            return Ok((StatusCode::OK, Json(response)));
         }
     }
 
@@ -256,10 +270,11 @@ pub async fn get_resolved_members(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let response: Vec<crate::domain::entities::StaffResponse> = staff_list
-        .into_iter()
-        .map(crate::domain::entities::StaffResponse::from)
-        .collect();
+    let serialized: Vec<StaffSerializer> =
+        staff_list.into_iter().map(StaffSerializer::from).collect();
+    let total = serialized.len() as u64;
+
+    let response = ApiResponse::with_total("Resolved members retrieved successfully", serialized, total);
 
     // Cache the result
     let _: Result<(), _> = redis_conn

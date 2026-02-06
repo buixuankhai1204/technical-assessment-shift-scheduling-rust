@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use shared::{DomainResult, PaginationParams};
 use uuid::Uuid;
 
-use crate::domain::entities::{CreateGroupRequest, StaffGroup, UpdateGroupRequest};
+use crate::api::requests::{CreateGroupRequest, UpdateGroupRequest};
+use crate::domain::entities::StaffGroup;
 
 /// Repository trait for StaffGroup operations
 #[async_trait]
@@ -17,6 +18,7 @@ pub trait GroupRepository: Send + Sync {
     async fn list(&self, params: PaginationParams) -> DomainResult<(Vec<StaffGroup>, u64)>;
 
     /// List child groups by parent ID
+    #[allow(dead_code)]
     async fn list_by_parent_id(&self, parent_id: Uuid) -> DomainResult<Vec<StaffGroup>>;
 
     /// Update group by ID

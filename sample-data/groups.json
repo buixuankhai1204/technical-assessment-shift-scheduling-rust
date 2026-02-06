@@ -1,22 +1,22 @@
 [
   {
-    "name": "Engineering",
-    "parent_group_name": null
+    "name": "Engineering Department",
+    "parent_id": null
   },
   {
     "name": "Backend Team",
-    "parent_group_name": "Engineering"
+    "parent_id": null
   },
   {
     "name": "Frontend Team",
-    "parent_group_name": "Engineering"
+    "parent_id": null
   },
   {
-    "name": "Backend Team A",
-    "parent_group_name": "Backend Team"
+    "name": "DevOps Team",
+    "parent_id": null
   },
   {
-    "name": "Backend Team B",
-    "parent_group_name": "Backend Team"
+    "name": "QA Team",
+    "parent_id": null
   }
 ]

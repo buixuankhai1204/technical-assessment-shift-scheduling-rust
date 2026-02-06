@@ -9,15 +9,14 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use api::AppState;
 use domain::repositories::{GroupRepository, MembershipRepository, StaffRepository};
-use domain::services::GroupService;
 use infrastructure::{
     config::Settings,
     database, redis,
     repositories::{
         PostgresGroupRepository, PostgresMembershipRepository, PostgresStaffRepository,
     },
+    GroupService,
 };
-use crate::infrastructure::GroupService;
 
 #[tokio::main]
 async fn main() -> Result<()> {

@@ -123,20 +123,6 @@ This will start:
 - Data Service on port 8080
 - Scheduling Service on port 8081
 
-### 3. Run Database Migrations
-
-Migrations run automatically when services start, but you can run them manually:
-
-```bash
-# Data Service migrations
-cd data-service
-sqlx migrate run
-
-# Scheduling Service migrations
-cd ../scheduling-service
-sqlx migrate run
-```
-
 ### 4. Import Sample Data (Optional)
 
 ```bash

@@ -2,6 +2,6 @@ pub mod group;
 pub mod membership;
 pub mod staff;
 
-pub use group::{CreateGroupRequest, GroupResponse, StaffGroup, UpdateGroupRequest};
-pub use membership::{AddMemberRequest, GroupMembership, MembershipResponse, RemoveMemberRequest};
-pub use staff::{CreateStaffRequest, Staff, StaffResponse, UpdateStaffRequest};
+pub use group::StaffGroup;
+pub use membership::GroupMembership;
+pub use staff::Staff;

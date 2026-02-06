@@ -6,28 +6,9 @@ use uuid::Uuid;
 
 use crate::domain::entities::Staff;
 
-/// Request to create a new staff member
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct CreateStaffRequest {
-    pub name: String,
-    pub email: String,
-    pub position: String,
-    #[serde(default)]
-    pub status: Option<StaffStatus>,
-}
-
-/// Request to update a staff member
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct UpdateStaffRequest {
-    pub name: Option<String>,
-    pub email: Option<String>,
-    pub position: Option<String>,
-    pub status: Option<StaffStatus>,
-}
-
-/// Staff response DTO
+/// Staff serializer DTO
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct StaffResponse {
+pub struct StaffSerializer {
     pub id: Uuid,
     pub name: String,
     pub email: String,
@@ -37,7 +18,7 @@ pub struct StaffResponse {
     pub updated_at: DateTime<Utc>,
 }
 
-impl From<Staff> for StaffResponse {
+impl From<Staff> for StaffSerializer {
     fn from(staff: Staff) -> Self {
         Self {
             id: staff.id,
@@ -49,10 +30,4 @@ impl From<Staff> for StaffResponse {
             updated_at: staff.updated_at,
         }
     }
-}
-
-/// Batch import request for staff
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct BatchImportStaffRequest {
-    pub staff: Vec<CreateStaffRequest>,
 }

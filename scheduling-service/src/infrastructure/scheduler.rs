@@ -148,10 +148,7 @@ impl ScheduleGenerator {
             };
 
             if self.validate_assignment(&context).is_ok() {
-                assignments
-                    .entry(staff_id)
-                    .or_default()
-                    .insert(date, shift);
+                assignments.entry(staff_id).or_default().insert(date, shift);
                 unassigned_staff.remove(i);
                 assigned_count += 1;
             } else {

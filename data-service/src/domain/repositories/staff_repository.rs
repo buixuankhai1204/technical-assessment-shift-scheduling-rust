@@ -2,7 +2,8 @@ use async_trait::async_trait;
 use shared::{DomainResult, PaginationParams, StaffStatus};
 use uuid::Uuid;
 
-use crate::domain::entities::{CreateStaffRequest, Staff, UpdateStaffRequest};
+use crate::api::requests::{CreateStaffRequest, UpdateStaffRequest};
+use crate::domain::entities::Staff;
 
 /// Repository trait for Staff operations
 #[async_trait]
@@ -14,12 +15,14 @@ pub trait StaffRepository: Send + Sync {
     async fn find_by_id(&self, id: Uuid) -> DomainResult<Option<Staff>>;
 
     /// Find staff by email
+    #[allow(dead_code)]
     async fn find_by_email(&self, email: &str) -> DomainResult<Option<Staff>>;
 
     /// List all staff with pagination
     async fn list(&self, params: PaginationParams) -> DomainResult<(Vec<Staff>, u64)>;
 
     /// List staff by status
+    #[allow(dead_code)]
     async fn list_by_status(
         &self,
         status: StaffStatus,

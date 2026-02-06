@@ -8,12 +8,13 @@ use chrono::{Datelike, Utc};
 use shared::JobStatus;
 use uuid::Uuid;
 
+use crate::api::requests::CreateScheduleRequest;
 use crate::api::state::AppState;
 use crate::domain::entities::ScheduleJob;
 use crate::infrastructure::ScheduleJobRequest;
 use crate::presentation::{
-    CreateScheduleRequest, ScheduleJobSerialize, ScheduleResultSerialize,
-    ScheduleStatusSerialize, ShiftAssignmentSerialize,
+    ScheduleJobSerialize, ScheduleResultSerialize, ScheduleStatusSerialize,
+    ShiftAssignmentSerialize,
 };
 
 /// Submit a new schedule job

@@ -3,7 +3,8 @@ use shared::{DomainError, DomainResult, PaginationParams, StaffStatus};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::domain::entities::{CreateStaffRequest, Staff, UpdateStaffRequest};
+use crate::api::requests::{CreateStaffRequest, UpdateStaffRequest};
+use crate::domain::entities::Staff;
 use crate::domain::repositories::StaffRepository;
 
 pub struct PostgresStaffRepository {

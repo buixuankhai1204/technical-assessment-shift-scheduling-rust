@@ -8,7 +8,9 @@ use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use api::AppState;
-use domain::rules::{MaxDaysOffRule, MinDaysOffRule, NoMorningAfterEveningRule, Rule, ShiftBalanceRule};
+use domain::rules::{
+    MaxDaysOffRule, MinDaysOffRule, NoMorningAfterEveningRule, Rule, ShiftBalanceRule,
+};
 use infrastructure::{
     config::Settings,
     database,
@@ -59,9 +61,15 @@ async fn main() -> Result<()> {
     // Create scheduling rules from config
     let rules: Vec<Arc<dyn Rule>> = vec![
         Arc::new(NoMorningAfterEveningRule::new()),
-        Arc::new(MinDaysOffRule::new(settings.scheduling.min_days_off_per_week)),
-        Arc::new(MaxDaysOffRule::new(settings.scheduling.max_days_off_per_week)),
-        Arc::new(ShiftBalanceRule::new(settings.scheduling.max_daily_shift_difference)),
+        Arc::new(MinDaysOffRule::new(
+            settings.scheduling.min_days_off_per_week,
+        )),
+        Arc::new(MaxDaysOffRule::new(
+            settings.scheduling.max_days_off_per_week,
+        )),
+        Arc::new(ShiftBalanceRule::new(
+            settings.scheduling.max_daily_shift_difference,
+        )),
     ];
     tracing::info!("Scheduling rules configured");
 
