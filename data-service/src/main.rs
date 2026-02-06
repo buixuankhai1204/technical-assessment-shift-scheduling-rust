@@ -19,7 +19,6 @@ use infrastructure::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -30,24 +29,17 @@ async fn main() -> Result<()> {
 
     tracing::info!("Starting Data Service...");
 
-    // Load configuration
     let settings = Settings::new()?;
     tracing::info!("Configuration loaded: {:?}", settings);
 
-    // Initialize database pool
     let db_pool =
         database::create_pool(&settings.database.url, settings.database.max_connections).await?;
     tracing::info!("Database connection pool created");
 
-    // Run migrations
     database::run_migrations(&db_pool).await?;
     tracing::info!("Database migrations completed");
-
-    // Initialize Redis connection
     let redis_pool = redis::create_redis_pool(&settings.redis.url).await?;
     tracing::info!("Redis connection established");
-
-    // Initialize repositories
     let staff_repo: Arc<dyn StaffRepository> =
         Arc::new(PostgresStaffRepository::new(db_pool.clone()));
     let group_repo: Arc<dyn GroupRepository> =
@@ -57,7 +49,6 @@ async fn main() -> Result<()> {
 
     tracing::info!("Repositories initialized");
 
-    // Create application state
     let app_state = AppState::new(
         staff_repo,
         group_repo,
@@ -65,14 +56,10 @@ async fn main() -> Result<()> {
         redis_pool,
     );
 
-    // Create router
     let app = api::create_router(app_state);
-
-    // Start server
     let listener = tokio::net::TcpListener::bind(settings.server_address()).await?;
     let addr = listener.local_addr()?;
     tracing::info!("Data Service listening on {}", addr);
-    tracing::info!("Swagger UI available at http://{}/swagger-ui", addr);
 
     axum::serve(listener, app).await?;
 

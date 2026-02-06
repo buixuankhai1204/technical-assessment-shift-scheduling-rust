@@ -6,7 +6,6 @@ use uuid::Uuid;
 use crate::domain::entities::{GroupWithMembers, StaffGroup};
 use crate::presentation::StaffSerializer;
 
-/// Staff group serializer DTO
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct GroupSerializer {
     pub id: Uuid,
@@ -30,7 +29,6 @@ impl GroupSerializer {
     }
 }
 
-/// A subgroup with its direct members — used in the resolved-members response
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct ResolvedGroupSerializer {
     pub group_id: Uuid,

@@ -6,7 +6,6 @@ use uuid::Uuid;
 
 use crate::domain::entities::{ScheduleJob, ShiftAssignment};
 
-/// Schedule job response after submission
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ScheduleJobSerializer {
     pub schedule_id: Uuid,
@@ -22,7 +21,6 @@ impl From<ScheduleJob> for ScheduleJobSerializer {
     }
 }
 
-/// Schedule status response
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ScheduleStatusSerializer {
     pub schedule_id: Uuid,
@@ -50,7 +48,6 @@ impl From<ScheduleJob> for ScheduleStatusSerializer {
     }
 }
 
-/// Shift assignment response
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ShiftAssignmentSerializer {
     pub staff_id: Uuid,
@@ -68,7 +65,6 @@ impl From<ShiftAssignment> for ShiftAssignmentSerializer {
     }
 }
 
-/// Complete schedule result response
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ScheduleResultSerializer {
     pub schedule_id: Uuid,

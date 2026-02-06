@@ -7,7 +7,6 @@ use crate::api::requests::{CreateGroupRequest, UpdateGroupRequest};
 use crate::domain::entities::{GroupWithMembers, Staff, StaffGroup};
 use crate::domain::repositories::GroupRepository;
 
-/// Flat row returned by the resolved-members query
 #[derive(sqlx::FromRow)]
 struct ResolvedMemberRow {
     group_id: Uuid,
@@ -189,7 +188,6 @@ impl GroupRepository for PostgresGroupRepository {
         .await
         .map_err(|e| DomainError::DatabaseError(e.to_string()))?;
 
-        // Count unique staff across all groups
         let unique_count = {
             let mut ids: Vec<Uuid> = rows.iter().map(|r| r.staff_id).collect();
             ids.sort();
@@ -197,7 +195,6 @@ impl GroupRepository for PostgresGroupRepository {
             ids.len() as u64
         };
 
-        // Group rows by group_id, preserving ORDER BY sg.name
         let mut result: Vec<GroupWithMembers> = Vec::new();
         let mut current_group_id: Option<Uuid> = None;
 
@@ -216,7 +213,6 @@ impl GroupRepository for PostgresGroupRepository {
                 // Same group — push member to the last entry
                 result.last_mut().unwrap().members.push(staff);
             } else {
-                // New group
                 current_group_id = Some(row.group_id);
                 let group = StaffGroup {
                     id: row.group_id,

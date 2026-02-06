@@ -5,7 +5,6 @@ use uuid::Uuid;
 use crate::api::requests::{CreateGroupRequest, UpdateGroupRequest};
 use crate::domain::entities::{GroupWithMembers, StaffGroup};
 
-/// Repository trait for StaffGroup operations
 #[async_trait]
 pub trait GroupRepository: Send + Sync {
     /// Create a new staff group

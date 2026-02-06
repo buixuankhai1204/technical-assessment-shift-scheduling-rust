@@ -4,7 +4,6 @@ use shared::ShiftType;
 use sqlx::FromRow;
 use uuid::Uuid;
 
-/// Shift assignment entity
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ShiftAssignment {
     pub id: Uuid,

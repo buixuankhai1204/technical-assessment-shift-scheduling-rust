@@ -5,7 +5,6 @@ use uuid::Uuid;
 
 use crate::domain::entities::{GroupMembership, Staff, StaffGroup};
 
-/// Membership serializer DTO
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct MembershipSerializer {
     pub id: Uuid,

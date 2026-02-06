@@ -1,22 +1,13 @@
-use chrono::NaiveDate;
 use shared::{DomainError, DomainResult, JobStatus};
 use std::sync::Arc;
+use chrono::NaiveDate;
 use tokio::sync::mpsc;
 use uuid::Uuid;
-
+use crate::api::requests::schedule_request::ScheduleJobRequest;
 use crate::domain::repositories::{ScheduleJobRepository, ShiftAssignmentRepository};
-use crate::infrastructure::http_client::DataServiceClient;
 use crate::domain::schedule_generator::ScheduleGenerator;
+use crate::infrastructure::http_client::DataServiceClient;
 
-/// Message sent to the job processor
-#[derive(Debug)]
-pub struct ScheduleJobRequest {
-    pub job_id: Uuid,
-    pub staff_group_id: Uuid,
-    pub period_begin_date: NaiveDate,
-}
-
-/// Async job processor for schedule generation
 pub struct JobProcessor {
     job_repo: Arc<dyn ScheduleJobRepository>,
     assignment_repo: Arc<dyn ShiftAssignmentRepository>,
@@ -39,7 +30,6 @@ impl JobProcessor {
         }
     }
 
-    /// Start the background processor
     pub fn start(
         self: Arc<Self>,
     ) -> (
@@ -63,12 +53,10 @@ impl JobProcessor {
     async fn process_job(&self, request: ScheduleJobRequest) -> DomainResult<()> {
         tracing::info!("Processing schedule job {}", request.job_id);
 
-        // Update job status to processing
         self.job_repo
             .update_status(request.job_id, JobStatus::Processing, None)
             .await?;
 
-        // Execute the scheduling logic
         match self.execute_scheduling(&request).await {
             Ok(()) => {
                 self.job_repo.mark_completed(request.job_id).await?;
@@ -88,7 +76,6 @@ impl JobProcessor {
 
     /// Execute the actual scheduling logic
     async fn execute_scheduling(&self, request: &ScheduleJobRequest) -> DomainResult<()> {
-        // Fetch staff members from the data service
         let staff_members = self
             .data_service_client
             .get_group_members(request.staff_group_id)

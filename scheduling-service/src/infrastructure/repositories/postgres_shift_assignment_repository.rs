@@ -6,7 +6,6 @@ use uuid::Uuid;
 use crate::domain::entities::ShiftAssignment;
 use crate::domain::repositories::ShiftAssignmentRepository;
 
-/// PostgreSQL implementation of ShiftAssignmentRepository
 pub struct PostgresShiftAssignmentRepository {
     pool: PgPool,
 }

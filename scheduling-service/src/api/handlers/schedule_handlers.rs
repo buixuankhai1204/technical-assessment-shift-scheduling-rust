@@ -9,15 +9,14 @@ use shared::{ApiResponse, JobStatus};
 use uuid::Uuid;
 
 use crate::api::requests::CreateScheduleRequest;
+use crate::api::requests::schedule_request::ScheduleJobRequest;
 use crate::api::state::AppState;
 use crate::domain::entities::ScheduleJob;
-use crate::infrastructure::ScheduleJobRequest;
 use crate::presentation::{
     ScheduleJobSerializer, ScheduleResultSerializer, ScheduleStatusSerializer,
     ShiftAssignmentSerializer,
 };
 
-/// Submit a new schedule job
 #[utoipa::path(
     post,
     path = "/api/v1/schedules",
@@ -33,7 +32,6 @@ pub async fn submit_schedule(
     State(state): State<AppState>,
     Json(request): Json<CreateScheduleRequest>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    // Validate that the date is a Monday
     if request.period_begin_date.weekday().num_days_from_monday() != 0 {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -41,7 +39,6 @@ pub async fn submit_schedule(
         ));
     }
 
-    // Create a new schedule job
     let job_id = Uuid::new_v4();
     let now = Utc::now();
 
@@ -56,14 +53,12 @@ pub async fn submit_schedule(
         completed_at: None,
     };
 
-    // Save to database
     let created_job = state
         .job_repo
         .create(job)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // Submit to background processor
     let schedule_request = ScheduleJobRequest {
         job_id: created_job.id,
         staff_group_id: created_job.staff_group_id,
@@ -90,7 +85,6 @@ pub async fn submit_schedule(
     ))
 }
 
-/// Get schedule job status
 #[utoipa::path(
     get,
     path = "/api/v1/schedules/{schedule_id}/status",
@@ -124,7 +118,6 @@ pub async fn get_schedule_status(
     ))
 }
 
-/// Get schedule result
 #[utoipa::path(
     get,
     path = "/api/v1/schedules/{schedule_id}",
@@ -143,7 +136,6 @@ pub async fn get_schedule_result(
     State(state): State<AppState>,
     Path(schedule_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    // Get the job
     let job = state
         .job_repo
         .find_by_id(schedule_id)
@@ -151,7 +143,6 @@ pub async fn get_schedule_result(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .ok_or((StatusCode::NOT_FOUND, "Schedule not found".to_string()))?;
 
-    // Check if job is completed
     if job.status != JobStatus::Completed {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -162,7 +153,6 @@ pub async fn get_schedule_result(
         ));
     }
 
-    // Get assignments
     let assignments = state
         .assignment_repo
         .find_by_job_id(schedule_id)

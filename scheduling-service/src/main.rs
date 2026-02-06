@@ -22,7 +22,6 @@ use infrastructure::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -33,25 +32,20 @@ async fn main() -> Result<()> {
 
     tracing::info!("Starting Scheduling Service...");
 
-    // Load configuration
     let settings = Settings::new()?;
     tracing::info!("Configuration loaded: {:?}", settings);
 
-    // Initialize database pool
     let db_pool =
         database::create_pool(&settings.database.url, settings.database.max_connections).await?;
     tracing::info!("Database connection pool created");
 
-    // Run migrations
     database::run_migrations(&db_pool).await?;
     tracing::info!("Database migrations completed");
 
-    // Initialize repositories
     let job_repo = Arc::new(PostgresScheduleJobRepository::new(db_pool.clone()));
     let assignment_repo = Arc::new(PostgresShiftAssignmentRepository::new(db_pool.clone()));
     tracing::info!("Repositories initialized");
 
-    // Initialize data service client
     let data_service_url = format!(
         "http://{}:{}",
         settings.data_service.host, settings.data_service.port
@@ -59,7 +53,6 @@ async fn main() -> Result<()> {
     let data_service_client = Arc::new(DataServiceClient::new(data_service_url));
     tracing::info!("Data service client initialized");
 
-    // Create scheduling rules from config
     let rules: Vec<Arc<dyn Rule>> = vec![
         Arc::new(NoMorningAfterEveningRule::new()),
         Arc::new(MinDaysOffRule::new(
@@ -74,10 +67,8 @@ async fn main() -> Result<()> {
     ];
     tracing::info!("Scheduling rules configured");
 
-    // Create schedule generator
     let scheduler = Arc::new(ScheduleGenerator::new(rules));
 
-    // Create job processor
     let processor = Arc::new(JobProcessor::new(
         job_repo.clone(),
         assignment_repo.clone(),
@@ -85,22 +76,17 @@ async fn main() -> Result<()> {
         scheduler,
     ));
 
-    // Start background processor
     let (schedule_sender, processor_handle) = processor.start();
     tracing::info!("Background schedule processor started");
 
-    // Create application state
     let app_state = AppState::new(job_repo, assignment_repo, schedule_sender);
 
-    // Create router
     let app = api::create_router(app_state);
 
-    // Start server
     let listener = tokio::net::TcpListener::bind(settings.server_address()).await?;
     let addr = listener.local_addr()?;
     tracing::info!("Scheduling Service listening on {}", addr);
 
-    // Serve with graceful shutdown
     let server = axum::serve(listener, app);
 
     tokio::select! {
@@ -112,7 +98,6 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Wait for background processor to finish
     processor_handle.abort();
     tracing::info!("Scheduling Service shutdown complete");
 

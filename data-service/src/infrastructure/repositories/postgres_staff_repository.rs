@@ -130,7 +130,6 @@ impl StaffRepository for PostgresStaffRepository {
     }
 
     async fn update(&self, id: Uuid, request: UpdateStaffRequest) -> DomainResult<Staff> {
-        // Fetch current staff
         let current = self
             .find_by_id(id)
             .await?

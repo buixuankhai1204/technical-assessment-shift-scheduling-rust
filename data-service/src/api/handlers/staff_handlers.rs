@@ -12,9 +12,8 @@ use crate::api::requests::{CreateStaffRequest, UpdateStaffRequest};
 use crate::api::state::AppState;
 use crate::presentation::StaffSerializer;
 
-const STAFF_CACHE_TTL: u64 = 300; // 5 minutes
+const STAFF_CACHE_TTL: u64 = 300;
 
-/// Delete all Redis keys matching a glob pattern (DEL does not support wildcards)
 async fn invalidate_cache_pattern(redis_conn: &mut redis::aio::ConnectionManager, pattern: &str) {
     let keys: Result<Vec<String>, _> = redis_conn.keys(pattern).await;
     if let Ok(keys) = keys {
@@ -24,7 +23,6 @@ async fn invalidate_cache_pattern(redis_conn: &mut redis::aio::ConnectionManager
     }
 }
 
-/// Create a new staff member
 #[utoipa::path(
     post,
     path = "/api/v1/staff",
@@ -46,7 +44,6 @@ pub async fn create_staff(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // Invalidate cache
     let mut redis_conn = state.redis_pool.clone();
     invalidate_cache_pattern(&mut redis_conn, "staff:list:*").await;
 
@@ -59,7 +56,6 @@ pub async fn create_staff(
     ))
 }
 
-/// Get staff by ID
 #[utoipa::path(
     get,
     path = "/api/v1/staff/{id}",
@@ -80,7 +76,6 @@ pub async fn get_staff_by_id(
     let cache_key = format!("staff:id:{}", id);
     let mut redis_conn = state.redis_pool.clone();
 
-    // Try cache first
     let cached: Result<String, _> = redis_conn.get(&cache_key).await;
     if let Ok(cached_data) = cached {
         if let Ok(staff_response) =
@@ -90,7 +85,6 @@ pub async fn get_staff_by_id(
         }
     }
 
-    // Fetch from database
     let staff = state
         .staff_repo
         .find_by_id(id)
@@ -100,7 +94,6 @@ pub async fn get_staff_by_id(
 
     let response = ApiResponse::success("Staff retrieved successfully", StaffSerializer::from(staff));
 
-    // Cache the result
     let _: Result<(), _> = redis_conn
         .set_ex(
             &cache_key,
@@ -112,7 +105,6 @@ pub async fn get_staff_by_id(
     Ok((StatusCode::OK, Json(response)))
 }
 
-/// List all staff with pagination
 #[utoipa::path(
     get,
     path = "/api/v1/staff",
@@ -130,7 +122,6 @@ pub async fn list_staff(
     let cache_key = format!("staff:list:{}:{}", params.page, params.page_size);
     let mut redis_conn = state.redis_pool.clone();
 
-    // Try cache first
     let cached: Result<String, _> = redis_conn.get(&cache_key).await;
     if let Ok(cached_data) = cached {
         if let Ok(response) =
@@ -140,7 +131,6 @@ pub async fn list_staff(
         }
     }
 
-    // Fetch from database
     let (staff_list, total) = state
         .staff_repo
         .list(params.clone())
@@ -152,7 +142,6 @@ pub async fn list_staff(
 
     let response = ApiResponse::with_total("Staff list retrieved successfully", serialized, total);
 
-    // Cache the result
     let _: Result<(), _> = redis_conn
         .set_ex(
             &cache_key,
@@ -164,7 +153,6 @@ pub async fn list_staff(
     Ok((StatusCode::OK, Json(response)))
 }
 
-/// Update staff by ID
 #[utoipa::path(
     put,
     path = "/api/v1/staff/{id}",
@@ -193,7 +181,6 @@ pub async fn update_staff(
             _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
         })?;
 
-    // Invalidate cache
     let mut redis_conn = state.redis_pool.clone();
     let cache_key = format!("staff:id:{}", id);
     let _: Result<(), _> = redis_conn.del(&cache_key).await;
@@ -208,7 +195,6 @@ pub async fn update_staff(
     ))
 }
 
-/// Delete staff by ID
 #[utoipa::path(
     delete,
     path = "/api/v1/staff/{id}",
@@ -231,7 +217,6 @@ pub async fn delete_staff(
         _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
     })?;
 
-    // Invalidate cache
     let mut redis_conn = state.redis_pool.clone();
     let cache_key = format!("staff:id:{}", id);
     let _: Result<(), _> = redis_conn.del(&cache_key).await;

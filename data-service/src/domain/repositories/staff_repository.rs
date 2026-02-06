@@ -5,7 +5,6 @@ use uuid::Uuid;
 use crate::api::requests::{CreateStaffRequest, UpdateStaffRequest};
 use crate::domain::entities::Staff;
 
-/// Repository trait for Staff operations
 #[async_trait]
 pub trait StaffRepository: Send + Sync {
     /// Create a new staff member

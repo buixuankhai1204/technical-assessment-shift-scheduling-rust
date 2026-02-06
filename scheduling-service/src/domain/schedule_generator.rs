@@ -7,7 +7,6 @@ use uuid::Uuid;
 use crate::domain::entities::ShiftAssignment;
 use crate::domain::rules::{AssignmentContext, Rule};
 
-/// Schedule generator using greedy algorithm
 pub struct ScheduleGenerator {
     rules: Vec<Arc<dyn Rule>>,
 }
@@ -24,7 +23,6 @@ impl ScheduleGenerator {
         start_date: NaiveDate,
         job_id: Uuid,
     ) -> DomainResult<Vec<ShiftAssignment>> {
-        // Validate that start_date is a Monday
         if start_date.weekday().num_days_from_monday() != 0 {
             return Err(DomainError::InvalidInput(
                 "Schedule must start on a Monday".to_string(),
@@ -40,7 +38,6 @@ impl ScheduleGenerator {
         let mut assignments: HashMap<Uuid, HashMap<NaiveDate, ShiftType>> = HashMap::new();
         let period_days = 28;
 
-        // Generate schedule day by day
         for day_offset in 0..period_days {
             let current_date = start_date
                 .checked_add_signed(chrono::Duration::days(day_offset))
@@ -49,7 +46,6 @@ impl ScheduleGenerator {
             self.assign_shifts_for_day(&mut assignments, &staff_ids, current_date)?;
         }
 
-        // Convert to ShiftAssignment entities
         let mut result = Vec::new();
         for (staff_id, staff_assignments) in assignments {
             for (date, shift) in staff_assignments {
@@ -99,7 +95,6 @@ impl ScheduleGenerator {
         let target_morning = unassigned_staff.len() / 3;
         let target_evening = (unassigned_staff.len() - target_morning) / 2;
 
-        // Assign morning shifts
         self.assign_shift_type(
             assignments,
             &mut unassigned_staff,
@@ -121,7 +116,6 @@ impl ScheduleGenerator {
         for staff_id in unassigned_staff {
             self.try_assign(assignments, staff_id, date, ShiftType::DayOff)?;
         }
-
         Ok(())
     }
 

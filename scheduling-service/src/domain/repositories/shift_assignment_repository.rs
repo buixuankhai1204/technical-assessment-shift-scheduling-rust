@@ -4,7 +4,6 @@ use uuid::Uuid;
 
 use crate::domain::entities::ShiftAssignment;
 
-/// Repository trait for ShiftAssignment operations
 #[async_trait]
 pub trait ShiftAssignmentRepository: Send + Sync {
     /// Create shift assignments in batch

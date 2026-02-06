@@ -12,21 +12,18 @@ const STAFF_JSON: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../s
 const GROUPS_JSON: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../sample-data/groups.json"));
 const MEMBERSHIPS_JSON: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../sample-data/memberships.json"));
 
-/// Deserialization struct for hierarchical group entries
 #[derive(Debug, Deserialize)]
 struct BatchGroupEntry {
     name: String,
     parent_name: Option<String>,
 }
 
-/// Deserialization struct for membership entries
 #[derive(Debug, Deserialize)]
 struct BatchMembershipEntry {
     staff_email: String,
     group_name: String,
 }
 
-/// Response for batch import operations
 #[derive(Debug, Serialize, ToSchema)]
 pub struct BatchImportSerializer {
     pub success_count: usize,
@@ -34,7 +31,6 @@ pub struct BatchImportSerializer {
     pub errors: Vec<String>,
 }
 
-/// Delete all Redis keys matching a glob pattern (DEL does not support wildcards)
 async fn invalidate_cache_pattern(redis_conn: &mut redis::aio::ConnectionManager, pattern: &str) {
     let keys: Result<Vec<String>, _> = redis_conn.keys(pattern).await;
     if let Ok(keys) = keys {
@@ -44,7 +40,6 @@ async fn invalidate_cache_pattern(redis_conn: &mut redis::aio::ConnectionManager
     }
 }
 
-/// Batch import staff from sample-data/staff.json
 #[utoipa::path(
     post,
     path = "/api/v1/batch/staff",
@@ -78,7 +73,6 @@ pub async fn batch_import_staff(
         }
     }
 
-    // Invalidate cache
     let mut redis_conn = state.redis_pool.clone();
     invalidate_cache_pattern(&mut redis_conn, "staff:*").await;
 
@@ -94,7 +88,6 @@ pub async fn batch_import_staff(
     ))
 }
 
-/// Batch import groups from sample-data/groups.json (with hierarchical parent_name resolution)
 #[utoipa::path(
     post,
     path = "/api/v1/batch/groups",
@@ -118,7 +111,6 @@ pub async fn batch_import_groups(
     let mut error_count = 0;
     let mut errors = Vec::new();
 
-    // Pass 1: Create all groups without parent_id
     for entry in &entries {
         let request = CreateGroupRequest {
             name: entry.name.clone(),
@@ -133,7 +125,6 @@ pub async fn batch_import_groups(
         }
     }
 
-    // Pass 2: For groups with parent_name, look up parent and update
     for entry in &entries {
         if let Some(parent_name) = &entry.parent_name {
             let parent = match state.group_repo.find_by_name(parent_name).await {
@@ -158,7 +149,7 @@ pub async fn batch_import_groups(
 
             let child = match state.group_repo.find_by_name(&entry.name).await {
                 Ok(Some(c)) => c,
-                Ok(None) => continue, // group creation failed in pass 1
+                Ok(None) => continue,
                 Err(e) => {
                     error_count += 1;
                     errors.push(format!(
@@ -184,7 +175,6 @@ pub async fn batch_import_groups(
         }
     }
 
-    // Invalidate cache
     let mut redis_conn = state.redis_pool.clone();
     invalidate_cache_pattern(&mut redis_conn, "group:*").await;
 
@@ -200,7 +190,6 @@ pub async fn batch_import_groups(
     ))
 }
 
-/// Batch import memberships from sample-data/memberships.json
 #[utoipa::path(
     post,
     path = "/api/v1/batch/memberships",
@@ -226,7 +215,6 @@ pub async fn batch_import_memberships(
     let mut errors = Vec::new();
 
     for entry in &entries {
-        // Look up staff by email
         let staff = match state.staff_repo.find_by_email(&entry.staff_email).await {
             Ok(Some(s)) => s,
             Ok(None) => {
@@ -244,7 +232,6 @@ pub async fn batch_import_memberships(
             }
         };
 
-        // Look up group by name
         let group = match state.group_repo.find_by_name(&entry.group_name).await {
             Ok(Some(g)) => g,
             Ok(None) => {
@@ -262,7 +249,6 @@ pub async fn batch_import_memberships(
             }
         };
 
-        // Add membership
         match state
             .membership_repo
             .add_member(staff.id, group.id)
@@ -279,7 +265,6 @@ pub async fn batch_import_memberships(
         }
     }
 
-    // Invalidate resolved-members caches
     let mut redis_conn = state.redis_pool.clone();
     invalidate_cache_pattern(&mut redis_conn, "group:resolved:*").await;
 

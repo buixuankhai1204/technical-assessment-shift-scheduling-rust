@@ -28,11 +28,9 @@ use shared::{JobStatus, ShiftType};
     ),
     components(schemas(
         crate::api::requests::CreateScheduleRequest,
-        // ApiResponse variants
         shared::ApiResponse<ScheduleJobSerializer>,
         shared::ApiResponse<ScheduleStatusSerializer>,
         shared::ApiResponse<ScheduleResultSerializer>,
-        // Serializers
         ScheduleJobSerializer,
         ScheduleStatusSerializer,
         ScheduleResultSerializer,

@@ -4,7 +4,6 @@ use uuid::Uuid;
 
 use crate::domain::entities::GroupMembership;
 
-/// Repository trait for GroupMembership operations
 #[async_trait]
 pub trait MembershipRepository: Send + Sync {
     /// Add staff to group

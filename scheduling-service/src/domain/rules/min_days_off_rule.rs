@@ -2,7 +2,6 @@ use super::{AssignmentContext, Rule};
 use chrono::{Datelike, NaiveDate};
 use shared::{DomainError, DomainResult, ShiftType};
 
-/// Rule: Staff must have minimum days off per week
 pub struct MinDaysOffRule {
     min_days_off: usize,
 }

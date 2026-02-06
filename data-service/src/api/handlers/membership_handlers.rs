@@ -12,7 +12,6 @@ use crate::api::requests::AddMemberRequest;
 use crate::api::state::AppState;
 use crate::presentation::{MembershipSerializer, StaffSerializer};
 
-/// Add staff to group
 #[utoipa::path(
     post,
     path = "/api/v1/groups/{group_id}/members",
@@ -38,7 +37,6 @@ pub async fn add_member(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // Look up staff and group to populate enriched serializer
     let staff = state
         .staff_repo
         .find_by_id(request.staff_id)
@@ -53,7 +51,6 @@ pub async fn add_member(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .ok_or((StatusCode::NOT_FOUND, "Group not found".to_string()))?;
 
-    // Invalidate cache for resolved members
     let mut redis_conn = state.redis_pool.clone();
     let _: Result<(), _> = redis_conn.del(format!("group:resolved:{}", group_id)).await;
 
@@ -66,7 +63,6 @@ pub async fn add_member(
     ))
 }
 
-/// Remove staff from group
 #[utoipa::path(
     delete,
     path = "/api/v1/groups/{group_id}/members/{staff_id}",
@@ -94,14 +90,12 @@ pub async fn remove_member(
             _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
         })?;
 
-    // Invalidate cache for resolved members
     let mut redis_conn = state.redis_pool.clone();
     let _: Result<(), _> = redis_conn.del(format!("group:resolved:{}", group_id)).await;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Get all members of a group (direct members only, not hierarchical)
 #[utoipa::path(
     get,
     path = "/api/v1/groups/{group_id}/members",

@@ -4,7 +4,6 @@ use shared::{Identifiable, JobStatus, Timestamped};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-/// Schedule job entity
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct ScheduleJob {
     pub id: Uuid,

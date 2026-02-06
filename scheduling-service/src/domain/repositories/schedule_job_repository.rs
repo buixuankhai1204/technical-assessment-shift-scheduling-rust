@@ -4,7 +4,6 @@ use uuid::Uuid;
 
 use crate::domain::entities::ScheduleJob;
 
-/// Repository trait for ScheduleJob operations
 #[async_trait]
 pub trait ScheduleJobRepository: Send + Sync {
     /// Create a new schedule job

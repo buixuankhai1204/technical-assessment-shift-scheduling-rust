@@ -2,7 +2,6 @@ use serde::Deserialize;
 use shared::StaffStatus;
 use utoipa::ToSchema;
 
-/// Request to create a new staff member
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateStaffRequest {
     pub name: String,
@@ -12,7 +11,6 @@ pub struct CreateStaffRequest {
     pub status: Option<StaffStatus>,
 }
 
-/// Request to update a staff member
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateStaffRequest {
     pub name: Option<String>,

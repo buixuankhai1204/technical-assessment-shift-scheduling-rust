@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use shared::{ApiResponse, DomainResult, StaffStatus};
 use uuid::Uuid;
 
-/// Staff response from data service
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaffResponse {
     pub id: Uuid,
@@ -15,7 +14,6 @@ pub struct StaffResponse {
     pub updated_at: DateTime<Utc>,
 }
 
-/// Resolved group with its members from data service
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResolvedGroupResponse {
     pub group_id: Uuid,
@@ -24,7 +22,6 @@ pub struct ResolvedGroupResponse {
 }
 
 
-/// Client for calling the data service
 pub struct DataServiceClient {
     base_url: String,
     client: reqwest::Client,
@@ -63,7 +60,6 @@ impl DataServiceClient {
             .await
             .map_err(|e| shared::DomainError::ExternalServiceError(e.to_string()))?;
 
-        // Flatten all members from all resolved groups
         let staff_list: Vec<StaffResponse> = api_response
             .data
             .into_iter()

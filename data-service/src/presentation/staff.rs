@@ -6,7 +6,6 @@ use uuid::Uuid;
 
 use crate::domain::entities::Staff;
 
-/// Staff serializer DTO
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct StaffSerializer {
     pub id: Uuid,

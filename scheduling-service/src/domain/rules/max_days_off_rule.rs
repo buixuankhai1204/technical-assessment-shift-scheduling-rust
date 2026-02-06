@@ -2,7 +2,6 @@ use super::{AssignmentContext, Rule};
 use chrono::{Datelike, NaiveDate};
 use shared::{DomainError, DomainResult, ShiftType};
 
-/// Rule: Staff cannot exceed maximum days off per week
 pub struct MaxDaysOffRule {
     max_days_off: usize,
 }

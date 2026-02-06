@@ -2,7 +2,6 @@ use super::{AssignmentContext, Rule};
 use shared::{DomainError, DomainResult, ShiftType};
 use std::collections::HashMap;
 
-/// Rule: Daily difference between morning and evening shifts cannot exceed threshold
 pub struct ShiftBalanceRule {
     max_daily_shift_difference: usize,
 }

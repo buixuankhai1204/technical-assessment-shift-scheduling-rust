@@ -1,7 +1,6 @@
 use super::{AssignmentContext, Rule};
 use shared::{DomainError, DomainResult, ShiftType};
 
-/// Rule: Staff cannot work morning shift after evening shift
 pub struct NoMorningAfterEveningRule;
 
 impl NoMorningAfterEveningRule {

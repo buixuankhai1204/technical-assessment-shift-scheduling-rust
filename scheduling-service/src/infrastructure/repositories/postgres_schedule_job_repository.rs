@@ -6,7 +6,6 @@ use uuid::Uuid;
 use crate::domain::entities::ScheduleJob;
 use crate::domain::repositories::ScheduleJobRepository;
 
-/// PostgreSQL implementation of ScheduleJobRepository
 pub struct PostgresScheduleJobRepository {
     pool: PgPool,
 }
