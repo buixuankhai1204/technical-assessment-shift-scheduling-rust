@@ -1,17 +1,16 @@
 use shared::{DomainError, DomainResult, JobStatus};
 use std::sync::Arc;
-use chrono::NaiveDate;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 use crate::api::requests::schedule_request::ScheduleJobRequest;
 use crate::domain::repositories::{ScheduleJobRepository, ShiftAssignmentRepository};
 use crate::domain::schedule_generator::ScheduleGenerator;
-use crate::infrastructure::http_client::DataServiceClient;
+use crate::infrastructure::http_client::DataServiceClientTrait;
 
 pub struct JobProcessor {
     job_repo: Arc<dyn ScheduleJobRepository>,
     assignment_repo: Arc<dyn ShiftAssignmentRepository>,
-    data_service_client: Arc<DataServiceClient>,
+    data_service_client: Arc<dyn DataServiceClientTrait>,
     scheduler: Arc<ScheduleGenerator>,
 }
 
@@ -19,7 +18,7 @@ impl JobProcessor {
     pub fn new(
         job_repo: Arc<dyn ScheduleJobRepository>,
         assignment_repo: Arc<dyn ShiftAssignmentRepository>,
-        data_service_client: Arc<DataServiceClient>,
+        data_service_client: Arc<dyn DataServiceClientTrait>,
         scheduler: Arc<ScheduleGenerator>,
     ) -> Self {
         Self {

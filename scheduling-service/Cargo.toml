@@ -20,7 +20,6 @@ uuid = { workspace = true }
 chrono = { workspace = true }
 reqwest = { workspace = true }
 anyhow = { workspace = true }
-thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
@@ -32,3 +31,13 @@ async-trait = "0.1"
 
 [dev-dependencies]
 mockall = { workspace = true }
+tokio = { workspace = true, features = ["test-util", "macros", "rt-multi-thread"] }
+tower = { workspace = true, features = ["util"] }
+axum-test = "16"
+hyper = { version = "1.4", features = ["full"] }
+http-body-util = "0.1"
+wiremock = "0.6"
+
+[[test]]
+name = "integration_tests"
+path = "tests/integration_tests.rs"

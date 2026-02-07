@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use shared::{ApiResponse, DomainResult, StaffStatus};
@@ -21,6 +22,12 @@ pub struct ResolvedGroupResponse {
     pub members: Vec<StaffResponse>,
 }
 
+/// Trait for data service client operations - allows mocking in tests
+#[async_trait]
+pub trait DataServiceClientTrait: Send + Sync {
+    /// Get all active staff members in a group (including descendants)
+    async fn get_group_members(&self, group_id: Uuid) -> DomainResult<Vec<StaffResponse>>;
+}
 
 pub struct DataServiceClient {
     base_url: String,
@@ -34,9 +41,12 @@ impl DataServiceClient {
             client: reqwest::Client::new(),
         }
     }
+}
 
+#[async_trait]
+impl DataServiceClientTrait for DataServiceClient {
     /// Get all active staff members in a group (including descendants)
-    pub async fn get_group_members(&self, group_id: Uuid) -> DomainResult<Vec<StaffResponse>> {
+    async fn get_group_members(&self, group_id: Uuid) -> DomainResult<Vec<StaffResponse>> {
         let url = format!("{}/api/v1/groups/{}/resolved-members", self.base_url, group_id);
 
         let response = self

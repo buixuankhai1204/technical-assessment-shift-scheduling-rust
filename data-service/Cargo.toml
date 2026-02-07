@@ -20,7 +20,6 @@ config = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 anyhow = { workspace = true }
-thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
@@ -30,8 +29,14 @@ shared = { path = "../shared" }
 # Async trait support
 async-trait = { workspace = true }
 
-# Futures utilities
-futures = "0.3"
-
 [dev-dependencies]
 mockall = { workspace = true }
+tokio = { workspace = true, features = ["test-util", "macros", "rt-multi-thread"] }
+tower = { workspace = true, features = ["util"] }
+axum-test = "16"
+hyper = { version = "1.4", features = ["full"] }
+http-body-util = "0.1"
+
+[[test]]
+name = "integration_tests"
+path = "tests/integration_tests.rs"
