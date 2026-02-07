@@ -2219,6 +2219,7 @@ dependencies = [
  "http-body-util",
  "hyper",
  "mockall",
+ "redis",
  "reqwest",
  "serde",
  "serde_json",
@@ -2381,6 +2382,7 @@ name = "shared"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "redis",
  "serde",
  "serde_json",
  "sqlx",

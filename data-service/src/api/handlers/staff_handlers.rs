@@ -4,25 +4,12 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use redis::AsyncCommands;
 use shared::{ApiResponse, DomainError, PaginationParams};
 use uuid::Uuid;
 
 use crate::api::requests::{CreateStaffRequest, UpdateStaffRequest};
 use crate::api::state::AppState;
 use crate::presentation::StaffSerializer;
-
-const STAFF_CACHE_TTL: u64 = 300;
-
-async fn invalidate_cache_pattern(redis_conn: &mut redis::aio::ConnectionManager, pattern: &str) {
-    let keys: Result<Vec<String>, _> = redis_conn.keys(pattern).await;
-    if let Ok(keys) = keys {
-        if !keys.is_empty() {
-            // Use Redis DEL command with multiple keys at once instead of looping
-            let _: Result<(), _> = redis::cmd("DEL").arg(&keys).query_async(redis_conn).await;
-        }
-    }
-}
 
 #[utoipa::path(
     post,
@@ -44,9 +31,6 @@ pub async fn create_staff(
         .create(request)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let mut redis_conn = state.redis_pool.clone();
-    invalidate_cache_pattern(&mut redis_conn, "staff:list:*").await;
 
     Ok((
         StatusCode::CREATED,
@@ -74,18 +58,6 @@ pub async fn get_staff_by_id(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let cache_key = format!("staff:id:{}", id);
-    let mut redis_conn = state.redis_pool.clone();
-
-    let cached: Result<String, _> = redis_conn.get(&cache_key).await;
-    if let Ok(cached_data) = cached {
-        if let Ok(staff_response) =
-            serde_json::from_str::<ApiResponse<StaffSerializer>>(&cached_data)
-        {
-            return Ok((StatusCode::OK, Json(staff_response)));
-        }
-    }
-
     let staff = state
         .staff_repo
         .find_by_id(id)
@@ -95,14 +67,6 @@ pub async fn get_staff_by_id(
 
     let response =
         ApiResponse::success("Staff retrieved successfully", StaffSerializer::from(staff));
-
-    let _: Result<(), _> = redis_conn
-        .set_ex(
-            &cache_key,
-            serde_json::to_string(&response).unwrap(),
-            STAFF_CACHE_TTL,
-        )
-        .await;
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -121,18 +85,6 @@ pub async fn list_staff(
     State(state): State<AppState>,
     Query(params): Query<PaginationParams>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let cache_key = format!("staff:list:{}:{}", params.page, params.page_size);
-    let mut redis_conn = state.redis_pool.clone();
-
-    let cached: Result<String, _> = redis_conn.get(&cache_key).await;
-    if let Ok(cached_data) = cached {
-        if let Ok(response) =
-            serde_json::from_str::<ApiResponse<Vec<StaffSerializer>>>(&cached_data)
-        {
-            return Ok((StatusCode::OK, Json(response)));
-        }
-    }
-
     let (staff_list, total) = state
         .staff_repo
         .list(params.clone())
@@ -143,14 +95,6 @@ pub async fn list_staff(
         staff_list.into_iter().map(StaffSerializer::from).collect();
 
     let response = ApiResponse::with_total("Staff list retrieved successfully", serialized, total);
-
-    let _: Result<(), _> = redis_conn
-        .set_ex(
-            &cache_key,
-            serde_json::to_string(&response).unwrap(),
-            STAFF_CACHE_TTL,
-        )
-        .await;
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -183,11 +127,6 @@ pub async fn update_staff(
             _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
         })?;
 
-    let mut redis_conn = state.redis_pool.clone();
-    let cache_key = format!("staff:id:{}", id);
-    let _: Result<(), _> = redis_conn.del(&cache_key).await;
-    invalidate_cache_pattern(&mut redis_conn, "staff:list:*").await;
-
     Ok((
         StatusCode::OK,
         Json(ApiResponse::success(
@@ -218,11 +157,6 @@ pub async fn delete_staff(
         DomainError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
         _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
     })?;
-
-    let mut redis_conn = state.redis_pool.clone();
-    let cache_key = format!("staff:id:{}", id);
-    let _: Result<(), _> = redis_conn.del(&cache_key).await;
-    invalidate_cache_pattern(&mut redis_conn, "staff:list:*").await;
 
     Ok(StatusCode::NO_CONTENT)
 }

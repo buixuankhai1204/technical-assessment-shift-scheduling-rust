@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use shared::JobStatus;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -48,7 +48,7 @@ impl From<ScheduleJob> for ScheduleStatusSerializer {
     }
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct ShiftAssignmentSerializer {
     pub staff_id: Uuid,
     pub date: NaiveDate,
@@ -65,7 +65,7 @@ impl From<ShiftAssignment> for ShiftAssignmentSerializer {
     }
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct ScheduleResultSerializer {
     pub schedule_id: Uuid,
     pub period_begin_date: NaiveDate,

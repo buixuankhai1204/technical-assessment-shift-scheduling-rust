@@ -29,6 +29,9 @@ shared = { path = "../shared" }
 # Async trait support
 async-trait = "0.1"
 
+# Redis for caching
+redis = { workspace = true }
+
 [dev-dependencies]
 mockall = { workspace = true }
 tokio = { workspace = true, features = ["test-util", "macros", "rt-multi-thread"] }

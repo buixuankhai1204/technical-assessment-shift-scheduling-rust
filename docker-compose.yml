@@ -43,11 +43,7 @@ services:
       dockerfile: data-service/Dockerfile
     container_name: shift-scheduler-data-service
     environment:
-      APP__SERVER__HOST: 0.0.0.0
-      APP__SERVER__PORT: 8080
-      APP__DATABASE__URL: postgresql://postgres:postgres@postgresql:5432/data_service_db
-      APP__DATABASE__MAX_CONNECTIONS: 10
-      APP__REDIS__URL: redis://redis:6379
+      RUN_ENV: default
       RUST_LOG: data_service=debug,tower_http=debug
     ports:
       - "8080:8080"
@@ -67,20 +63,14 @@ services:
       dockerfile: scheduling-service/Dockerfile
     container_name: shift-scheduler-scheduling-service
     environment:
-      APP__SERVER__HOST: 0.0.0.0
-      APP__SERVER__PORT: 8081
-      APP__DATABASE__URL: postgresql://postgres:postgres@postgresql:5432/scheduling_service_db
-      APP__DATABASE__MAX_CONNECTIONS: 10
-      APP__DATA_SERVICE__HOST: data-service
-      APP__DATA_SERVICE__PORT: 8080
-      APP__SCHEDULING__MIN_DAYS_OFF_PER_WEEK: 1
-      APP__SCHEDULING__MAX_DAYS_OFF_PER_WEEK: 2
-      APP__SCHEDULING__MAX_DAILY_SHIFT_DIFFERENCE: 1
+      RUN_ENV: default
       RUST_LOG: scheduling_service=debug,tower_http=debug
     ports:
       - "8081:8081"
     depends_on:
       postgresql:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       data-service:
         condition: service_started

@@ -6,6 +6,9 @@ port = 8081
 url = "postgresql://postgres:postgres@localhost:5432/scheduling_service_db"
 max_connections = 10
 
+[redis]
+url = "redis://localhost:6379"
+
 [data_service]
 host = "data-service"
 port = 8080

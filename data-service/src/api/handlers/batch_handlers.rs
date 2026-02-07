@@ -1,8 +1,7 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use futures::future::join_all;
-use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
-use shared::ApiResponse;
+use shared::{cache_keys, invalidate_cache_pattern, ApiResponse};
 use utoipa::ToSchema;
 
 use crate::api::requests::CreateGroupRequest;
@@ -41,16 +40,6 @@ pub struct BatchImportSerializer {
     pub errors: Vec<String>,
 }
 
-async fn invalidate_cache_pattern(redis_conn: &mut redis::aio::ConnectionManager, pattern: &str) {
-    let keys: Result<Vec<String>, _> = redis_conn.keys(pattern).await;
-    if let Ok(keys) = keys {
-        if !keys.is_empty() {
-            // Use Redis DEL command with multiple keys at once instead of looping
-            let _: Result<(), _> = redis::cmd("DEL").arg(&keys).query_async(redis_conn).await;
-        }
-    }
-}
-
 #[utoipa::path(
     post,
     path = "/api/v1/batch/staff",
@@ -63,6 +52,7 @@ async fn invalidate_cache_pattern(redis_conn: &mut redis::aio::ConnectionManager
 pub async fn batch_import_staff(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
+    // ...existing code...
     let staff_list: Vec<CreateStaffRequest> = serde_json::from_str(STAFF_JSON).map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -70,7 +60,6 @@ pub async fn batch_import_staff(
         )
     })?;
 
-    // Use join_all to execute all staff creations in parallel
     let create_futures: Vec<_> = staff_list
         .into_iter()
         .map(|staff_request| {
@@ -94,9 +83,6 @@ pub async fn batch_import_staff(
             }
         }
     }
-
-    let mut redis_conn = state.redis_pool.clone();
-    invalidate_cache_pattern(&mut redis_conn, "staff:*").await;
 
     let data = BatchImportSerializer {
         success_count,
@@ -164,7 +150,6 @@ pub async fn batch_import_groups(
     // Phase 2: Set parent relationships (need to be after all groups are created)
     for entry in &entries {
         if let Some(parent_name) = &entry.parent_name {
-            // Use join! to lookup parent and child in parallel
             let parent_future = state.group_repo.find_by_name(parent_name);
             let child_future = state.group_repo.find_by_name(&entry.name);
 
@@ -209,8 +194,9 @@ pub async fn batch_import_groups(
         }
     }
 
+    // Invalidate resolved members cache since group hierarchy changed
     let mut redis_conn = state.redis_pool.clone();
-    invalidate_cache_pattern(&mut redis_conn, "group:*").await;
+    invalidate_cache_pattern(&mut redis_conn, cache_keys::RESOLVED_MEMBERS_PATTERN).await;
 
     let data = BatchImportSerializer {
         success_count,
@@ -249,7 +235,6 @@ pub async fn batch_import_memberships(
     let mut errors = Vec::new();
 
     for entry in &entries {
-        // Use futures::join! to lookup staff and group in parallel
         let staff_future = state.staff_repo.find_by_email(&entry.staff_email);
         let group_future = state.group_repo.find_by_name(&entry.group_name);
 
@@ -304,8 +289,9 @@ pub async fn batch_import_memberships(
         }
     }
 
+    // Invalidate resolved members cache since memberships changed
     let mut redis_conn = state.redis_pool.clone();
-    invalidate_cache_pattern(&mut redis_conn, "group:resolved:*").await;
+    invalidate_cache_pattern(&mut redis_conn, cache_keys::RESOLVED_MEMBERS_PATTERN).await;
 
     let data = BatchImportSerializer {
         success_count,

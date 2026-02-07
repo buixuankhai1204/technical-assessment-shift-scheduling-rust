@@ -6,7 +6,7 @@ use scheduling_service::api::AppState;
 use scheduling_service::domain::entities::{ScheduleJob, ShiftAssignment};
 use scheduling_service::domain::repositories::{ScheduleJobRepository, ShiftAssignmentRepository};
 use scheduling_service::infrastructure::http_client::{DataServiceClientTrait, StaffResponse};
-use shared::{DomainError, DomainResult, JobStatus, ShiftType, StaffStatus};
+use shared::{create_redis_pool, DomainError, DomainResult, JobStatus, ShiftType, StaffStatus};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use tokio::sync::mpsc;
@@ -171,14 +171,18 @@ pub fn create_sample_staff_list(count: usize) -> Vec<StaffResponse> {
 }
 
 /// Create test app state with mock repositories and a dummy channel
-pub fn create_test_app_state(
+pub async fn create_test_app_state(
     job_repo: Arc<dyn ScheduleJobRepository>,
     assignment_repo: Arc<dyn ShiftAssignmentRepository>,
 ) -> (AppState, mpsc::Receiver<ScheduleJobRequest>) {
-    // Create a channel for job processing (with larger buffer for tests)
     let (sender, receiver) = mpsc::channel::<ScheduleJobRequest>(100);
 
-    let state = AppState::new(job_repo, assignment_repo, sender);
+    // Try to connect to Redis, use a mock if not available
+    let redis_pool = create_redis_pool("redis://localhost:6379")
+        .await
+        .expect("Failed to create Redis pool for tests - ensure Redis is running");
+
+    let state = AppState::new(job_repo, assignment_repo, sender, redis_pool);
     (state, receiver)
 }
 

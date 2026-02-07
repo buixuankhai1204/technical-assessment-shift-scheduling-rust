@@ -5,26 +5,16 @@ use axum::{
     Json,
 };
 use futures::future::try_join_all;
-use redis::AsyncCommands;
-use shared::{ApiResponse, DomainError, PaginationParams};
+use shared::{
+    cache_keys, cache_ttl, get_cached, invalidate_cache, set_cached, ApiResponse, DomainError,
+    PaginationParams,
+};
 use uuid::Uuid;
 
 use crate::api::requests::{CreateGroupRequest, UpdateGroupRequest};
 use crate::api::state::AppState;
 use crate::domain::entities::StaffGroup;
 use crate::presentation::{GroupSerializer, ResolvedGroupSerializer};
-
-const GROUP_CACHE_TTL: u64 = 300;
-
-async fn invalidate_cache_pattern(redis_conn: &mut redis::aio::ConnectionManager, pattern: &str) {
-    let keys: Result<Vec<String>, _> = redis_conn.keys(pattern).await;
-    if let Ok(keys) = keys {
-        if !keys.is_empty() {
-            // Use Redis DEL command with multiple keys at once instead of looping
-            let _: Result<(), _> = redis::cmd("DEL").arg(&keys).query_async(redis_conn).await;
-        }
-    }
-}
 
 async fn resolve_parent_name(
     state: &AppState,
@@ -71,9 +61,6 @@ pub async fn create_group(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let mut redis_conn = state.redis_pool.clone();
-    invalidate_cache_pattern(&mut redis_conn, "group:list:*").await;
-
     let serializer = to_group_serializer(&state, group).await?;
 
     Ok((
@@ -102,18 +89,6 @@ pub async fn get_group_by_id(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let cache_key = format!("group:id:{}", id);
-    let mut redis_conn = state.redis_pool.clone();
-
-    let cached: Result<String, _> = redis_conn.get(&cache_key).await;
-    if let Ok(cached_data) = cached {
-        if let Ok(group_response) =
-            serde_json::from_str::<ApiResponse<GroupSerializer>>(&cached_data)
-        {
-            return Ok((StatusCode::OK, Json(group_response)));
-        }
-    }
-
     let group = state
         .group_repo
         .find_by_id(id)
@@ -123,14 +98,6 @@ pub async fn get_group_by_id(
 
     let serializer = to_group_serializer(&state, group).await?;
     let response = ApiResponse::success("Group retrieved successfully", serializer);
-
-    let _: Result<(), _> = redis_conn
-        .set_ex(
-            &cache_key,
-            serde_json::to_string(&response).unwrap(),
-            GROUP_CACHE_TTL,
-        )
-        .await;
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -149,18 +116,6 @@ pub async fn list_groups(
     State(state): State<AppState>,
     Query(params): Query<PaginationParams>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let cache_key = format!("group:list:{}:{}", params.page, params.page_size);
-    let mut redis_conn = state.redis_pool.clone();
-
-    let cached: Result<String, _> = redis_conn.get(&cache_key).await;
-    if let Ok(cached_data) = cached {
-        if let Ok(response) =
-            serde_json::from_str::<ApiResponse<Vec<GroupSerializer>>>(&cached_data)
-        {
-            return Ok((StatusCode::OK, Json(response)));
-        }
-    }
-
     let (groups, total) = state
         .group_repo
         .list(params.clone())
@@ -176,14 +131,6 @@ pub async fn list_groups(
     let serialized = try_join_all(serializer_futures).await?;
 
     let response = ApiResponse::with_total("Group list retrieved successfully", serialized, total);
-
-    let _: Result<(), _> = redis_conn
-        .set_ex(
-            &cache_key,
-            serde_json::to_string(&response).unwrap(),
-            GROUP_CACHE_TTL,
-        )
-        .await;
 
     Ok((StatusCode::OK, Json(response)))
 }
@@ -216,11 +163,9 @@ pub async fn update_group(
             _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
         })?;
 
+    // Invalidate resolved members cache for this group
     let mut redis_conn = state.redis_pool.clone();
-    let cache_key = format!("group:id:{}", id);
-    let _: Result<(), _> = redis_conn.del(&cache_key).await;
-    invalidate_cache_pattern(&mut redis_conn, "group:list:*").await;
-    let _: Result<(), _> = redis_conn.del(format!("group:resolved:{}", id)).await;
+    invalidate_cache(&mut redis_conn, &cache_keys::resolved_members(id)).await;
 
     let serializer = to_group_serializer(&state, group).await?;
 
@@ -255,11 +200,9 @@ pub async fn delete_group(
         _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
     })?;
 
+    // Invalidate resolved members cache for this group
     let mut redis_conn = state.redis_pool.clone();
-    let cache_key = format!("group:id:{}", id);
-    let _: Result<(), _> = redis_conn.del(&cache_key).await;
-    invalidate_cache_pattern(&mut redis_conn, "group:list:*").await;
-    let _: Result<(), _> = redis_conn.del(format!("group:resolved:{}", id)).await;
+    invalidate_cache(&mut redis_conn, &cache_keys::resolved_members(id)).await;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -291,16 +234,14 @@ pub async fn get_resolved_members(
             format!("Group with id {} not found", id),
         ))?;
 
-    let cache_key = format!("group:resolved:{}", id);
+    let cache_key = cache_keys::resolved_members(id);
     let mut redis_conn = state.redis_pool.clone();
 
-    let cached: Result<String, _> = redis_conn.get(&cache_key).await;
-    if let Ok(cached_data) = cached {
-        if let Ok(response) =
-            serde_json::from_str::<ApiResponse<Vec<ResolvedGroupSerializer>>>(&cached_data)
-        {
-            return Ok((StatusCode::OK, Json(response)));
-        }
+    // Check cache first
+    if let Some(response) =
+        get_cached::<ApiResponse<Vec<ResolvedGroupSerializer>>>(&mut redis_conn, &cache_key).await
+    {
+        return Ok((StatusCode::OK, Json(response)));
     }
 
     let (groups_with_members, total_unique) = state
@@ -320,13 +261,14 @@ pub async fn get_resolved_members(
         total_unique,
     );
 
-    let _: Result<(), _> = redis_conn
-        .set_ex(
-            &cache_key,
-            serde_json::to_string(&response).unwrap(),
-            GROUP_CACHE_TTL,
-        )
-        .await;
+    // Cache the result
+    set_cached(
+        &mut redis_conn,
+        &cache_key,
+        &response,
+        cache_ttl::RESOLVED_MEMBERS,
+    )
+    .await;
 
     Ok((StatusCode::OK, Json(response)))
 }

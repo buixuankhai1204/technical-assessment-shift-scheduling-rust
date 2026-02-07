@@ -5,6 +5,7 @@ use serde::Deserialize;
 pub struct Settings {
     pub server: ServerSettings,
     pub database: DatabaseSettings,
+    pub redis: RedisSettings,
     pub data_service: DataServiceSettings,
     pub scheduling: SchedulingConfig,
 }
@@ -19,6 +20,11 @@ pub struct ServerSettings {
 pub struct DatabaseSettings {
     pub url: String,
     pub max_connections: u32,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct RedisSettings {
+    pub url: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]

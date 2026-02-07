@@ -5,7 +5,7 @@ use axum::{
     Json,
 };
 use chrono::{Datelike, Utc};
-use shared::{ApiResponse, JobStatus};
+use shared::{cache_keys, cache_ttl, get_cached, set_cached, ApiResponse, JobStatus};
 use uuid::Uuid;
 
 use crate::api::requests::schedule_request::ScheduleJobRequest;
@@ -136,6 +136,16 @@ pub async fn get_schedule_result(
     State(state): State<AppState>,
     Path(schedule_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let cache_key = cache_keys::schedule_result(schedule_id);
+    let mut redis_conn = state.redis_pool.clone();
+
+    // Check cache first
+    if let Some(response) =
+        get_cached::<ApiResponse<ScheduleResultSerializer>>(&mut redis_conn, &cache_key).await
+    {
+        return Ok((StatusCode::OK, Json(response)));
+    }
+
     let job = state
         .job_repo
         .find_by_id(schedule_id)
@@ -169,11 +179,16 @@ pub async fn get_schedule_result(
         assignments: assignment_responses,
     };
 
-    Ok((
-        StatusCode::OK,
-        Json(ApiResponse::success(
-            "Schedule result retrieved successfully",
-            data,
-        )),
-    ))
+    let response = ApiResponse::success("Schedule result retrieved successfully", data);
+
+    // Cache the result (completed schedules don't change)
+    set_cached(
+        &mut redis_conn,
+        &cache_key,
+        &response,
+        cache_ttl::SCHEDULE_RESULT,
+    )
+    .await;
+
+    Ok((StatusCode::OK, Json(response)))
 }

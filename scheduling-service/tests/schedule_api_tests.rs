@@ -24,7 +24,7 @@ async fn setup_test_server() -> TestServerWithReceiver {
     let job_repo = Arc::new(MockScheduleJobRepository::new());
     let assignment_repo = Arc::new(MockShiftAssignmentRepository::new());
 
-    let (state, receiver) = create_test_app_state(job_repo, assignment_repo);
+    let (state, receiver) = create_test_app_state(job_repo, assignment_repo).await;
     let app = create_router(state);
 
     TestServerWithReceiver {
@@ -43,7 +43,7 @@ async fn setup_test_server_with_jobs(
         assignment_list,
     ));
 
-    let (state, receiver) = create_test_app_state(job_repo, assignment_repo);
+    let (state, receiver) = create_test_app_state(job_repo, assignment_repo).await;
     let app = create_router(state);
 
     TestServerWithReceiver {

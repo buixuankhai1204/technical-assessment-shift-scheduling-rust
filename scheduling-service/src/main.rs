@@ -16,6 +16,7 @@ use infrastructure::{
     config::Settings,
     database,
     http_client::DataServiceClient,
+    redis,
     repositories::{PostgresScheduleJobRepository, PostgresShiftAssignmentRepository},
     JobProcessor,
 };
@@ -41,6 +42,9 @@ async fn main() -> Result<()> {
 
     database::run_migrations(&db_pool).await?;
     tracing::info!("Database migrations completed");
+
+    let redis_pool = redis::create_redis_pool(&settings.redis.url).await?;
+    tracing::info!("Redis connection established");
 
     let job_repo = Arc::new(PostgresScheduleJobRepository::new(db_pool.clone()));
     let assignment_repo = Arc::new(PostgresShiftAssignmentRepository::new(db_pool.clone()));
@@ -79,7 +83,7 @@ async fn main() -> Result<()> {
     let (schedule_sender, processor_handle) = processor.start();
     tracing::info!("Background schedule processor started");
 
-    let app_state = AppState::new(job_repo, assignment_repo, schedule_sender);
+    let app_state = AppState::new(job_repo, assignment_repo, schedule_sender, redis_pool);
 
     let app = api::create_router(app_state);
 
