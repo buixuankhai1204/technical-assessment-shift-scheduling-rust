@@ -3,12 +3,12 @@
 #[path = "common/mod.rs"]
 mod common;
 
+use axum::http::StatusCode;
+use axum_test::TestServer;
 use common::{
     create_mock_redis_pool, create_sample_group, create_sample_staff, create_test_app_state,
     MockGroupRepository, MockMembershipRepository, MockStaffRepository,
 };
-use axum::http::StatusCode;
-use axum_test::TestServer;
 use data_service::api::create_router;
 use serde_json::json;
 use std::sync::Arc;
@@ -125,4 +125,3 @@ async fn test_remove_member_not_found() {
 
     response.assert_status(StatusCode::NOT_FOUND);
 }
-

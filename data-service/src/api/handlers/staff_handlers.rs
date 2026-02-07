@@ -17,8 +17,9 @@ const STAFF_CACHE_TTL: u64 = 300;
 async fn invalidate_cache_pattern(redis_conn: &mut redis::aio::ConnectionManager, pattern: &str) {
     let keys: Result<Vec<String>, _> = redis_conn.keys(pattern).await;
     if let Ok(keys) = keys {
-        for key in keys {
-            let _: Result<(), _> = redis_conn.del::<_, ()>(&key).await;
+        if !keys.is_empty() {
+            // Use Redis DEL command with multiple keys at once instead of looping
+            let _: Result<(), _> = redis::cmd("DEL").arg(&keys).query_async(redis_conn).await;
         }
     }
 }
@@ -92,7 +93,8 @@ pub async fn get_staff_by_id(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
         .ok_or((StatusCode::NOT_FOUND, "Staff not found".to_string()))?;
 
-    let response = ApiResponse::success("Staff retrieved successfully", StaffSerializer::from(staff));
+    let response =
+        ApiResponse::success("Staff retrieved successfully", StaffSerializer::from(staff));
 
     let _: Result<(), _> = redis_conn
         .set_ex(

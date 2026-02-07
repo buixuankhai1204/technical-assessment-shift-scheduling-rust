@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use chrono::{NaiveDate, Utc};
 use mockall::mock;
-use scheduling_service::api::AppState;
 use scheduling_service::api::requests::schedule_request::ScheduleJobRequest;
+use scheduling_service::api::AppState;
 use scheduling_service::domain::entities::{ScheduleJob, ShiftAssignment};
 use scheduling_service::domain::repositories::{ScheduleJobRepository, ShiftAssignmentRepository};
 use scheduling_service::infrastructure::http_client::{DataServiceClientTrait, StaffResponse};
@@ -138,7 +138,12 @@ impl ShiftAssignmentRepository for MockShiftAssignmentRepository {
 }
 
 /// Create a sample staff response for testing
-pub fn create_sample_staff_response(id: Uuid, name: &str, email: &str, position: &str) -> StaffResponse {
+pub fn create_sample_staff_response(
+    id: Uuid,
+    name: &str,
+    email: &str,
+    position: &str,
+) -> StaffResponse {
     let now = Utc::now();
     StaffResponse {
         id,
@@ -224,7 +229,11 @@ pub fn create_completed_job(
 }
 
 /// Create sample shift assignments for testing
-pub fn create_sample_assignments(job_id: Uuid, staff_ids: Vec<Uuid>, start_date: NaiveDate) -> Vec<ShiftAssignment> {
+pub fn create_sample_assignments(
+    job_id: Uuid,
+    staff_ids: Vec<Uuid>,
+    start_date: NaiveDate,
+) -> Vec<ShiftAssignment> {
     let now = Utc::now();
     let shifts = [ShiftType::Morning, ShiftType::Evening, ShiftType::DayOff];
     let mut assignments = Vec::new();

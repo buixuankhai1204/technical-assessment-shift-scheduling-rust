@@ -1,17 +1,19 @@
 #[path = "common/mod.rs"]
 mod common;
 
+use axum::http::StatusCode;
+use axum_test::{TestResponse, TestServer};
 use common::{
     create_completed_job, create_sample_assignments, create_sample_job, create_test_app_state,
     get_test_monday, MockScheduleJobRepository, MockShiftAssignmentRepository,
     TestServerWithReceiver,
 };
-use axum::http::StatusCode;
-use axum_test::{TestResponse, TestServer};
 use scheduling_service::api::create_router;
 use scheduling_service::domain::entities::{ScheduleJob, ShiftAssignment};
 use scheduling_service::domain::repositories::{ScheduleJobRepository, ShiftAssignmentRepository};
-use scheduling_service::domain::rules::{MinDaysOffRule, MaxDaysOffRule, NoMorningAfterEveningRule, ShiftBalanceRule};
+use scheduling_service::domain::rules::{
+    MaxDaysOffRule, MinDaysOffRule, NoMorningAfterEveningRule, ShiftBalanceRule,
+};
 use serde_json::json;
 use shared::JobStatus;
 use std::sync::Arc;
@@ -37,7 +39,9 @@ async fn setup_test_server_with_jobs(
     assignment_list: Vec<ShiftAssignment>,
 ) -> TestServerWithReceiver {
     let job_repo = Arc::new(MockScheduleJobRepository::with_jobs(job_list));
-    let assignment_repo = Arc::new(MockShiftAssignmentRepository::with_assignments(assignment_list));
+    let assignment_repo = Arc::new(MockShiftAssignmentRepository::with_assignments(
+        assignment_list,
+    ));
 
     let (state, receiver) = create_test_app_state(job_repo, assignment_repo);
     let app = create_router(state);
@@ -59,7 +63,8 @@ async fn test_submit_schedule_success() {
         "period_begin_date": monday.to_string()
     });
 
-    let response: TestResponse = test_server.server
+    let response: TestResponse = test_server
+        .server
         .post("/api/v1/schedules")
         .json(&request_body)
         .await;
@@ -83,7 +88,8 @@ async fn test_submit_schedule_invalid_date_not_monday() {
         "period_begin_date": tuesday.to_string()
     });
 
-    let response: TestResponse = test_server.server
+    let response: TestResponse = test_server
+        .server
         .post("/api/v1/schedules")
         .json(&request_body)
         .await;
@@ -100,7 +106,8 @@ async fn test_get_schedule_status_pending() {
 
     let test_server = setup_test_server_with_jobs(vec![job], vec![]).await;
 
-    let response: TestResponse = test_server.server
+    let response: TestResponse = test_server
+        .server
         .get(&format!("/api/v1/schedules/{}/status", job_id))
         .await;
 
@@ -119,7 +126,8 @@ async fn test_get_schedule_status_processing() {
 
     let test_server = setup_test_server_with_jobs(vec![job], vec![]).await;
 
-    let response: TestResponse = test_server.server
+    let response: TestResponse = test_server
+        .server
         .get(&format!("/api/v1/schedules/{}/status", job_id))
         .await;
 
@@ -137,7 +145,8 @@ async fn test_get_schedule_status_completed() {
 
     let test_server = setup_test_server_with_jobs(vec![job], vec![]).await;
 
-    let response: TestResponse = test_server.server
+    let response: TestResponse = test_server
+        .server
         .get(&format!("/api/v1/schedules/{}/status", job_id))
         .await;
 
@@ -151,7 +160,8 @@ async fn test_get_schedule_status_not_found() {
     let test_server = setup_test_server().await;
     let non_existent_id = Uuid::new_v4();
 
-    let response: TestResponse = test_server.server
+    let response: TestResponse = test_server
+        .server
         .get(&format!("/api/v1/schedules/{}/status", non_existent_id))
         .await;
 
@@ -170,7 +180,8 @@ async fn test_get_schedule_result_success() {
 
     let test_server = setup_test_server_with_jobs(vec![job], assignments).await;
 
-    let response: TestResponse = test_server.server
+    let response: TestResponse = test_server
+        .server
         .get(&format!("/api/v1/schedules/{}", job_id))
         .await;
 
@@ -190,7 +201,8 @@ async fn test_get_schedule_result_not_completed() {
 
     let test_server = setup_test_server_with_jobs(vec![job], vec![]).await;
 
-    let response: TestResponse = test_server.server
+    let response: TestResponse = test_server
+        .server
         .get(&format!("/api/v1/schedules/{}", job_id))
         .await;
 
@@ -207,7 +219,8 @@ async fn test_get_schedule_result_processing() {
 
     let test_server = setup_test_server_with_jobs(vec![job], vec![]).await;
 
-    let response: TestResponse = test_server.server
+    let response: TestResponse = test_server
+        .server
         .get(&format!("/api/v1/schedules/{}", job_id))
         .await;
 
@@ -219,7 +232,8 @@ async fn test_get_schedule_result_not_found() {
     let test_server = setup_test_server().await;
     let non_existent_id = Uuid::new_v4();
 
-    let response: TestResponse = test_server.server
+    let response: TestResponse = test_server
+        .server
         .get(&format!("/api/v1/schedules/{}", non_existent_id))
         .await;
 
@@ -228,7 +242,7 @@ async fn test_get_schedule_result_not_found() {
 
 #[tokio::test]
 async fn test_submit_multiple_schedules() {
-    let test_server:TestServerWithReceiver = setup_test_server().await;
+    let test_server: TestServerWithReceiver = setup_test_server().await;
     let group_id1 = Uuid::new_v4();
     let group_id2 = Uuid::new_v4();
     let monday = get_test_monday();
@@ -239,7 +253,8 @@ async fn test_submit_multiple_schedules() {
         "period_begin_date": monday.to_string()
     });
 
-    let response1: TestResponse = test_server.server
+    let response1: TestResponse = test_server
+        .server
         .post("/api/v1/schedules")
         .json(&request1)
         .await;
@@ -252,7 +267,8 @@ async fn test_submit_multiple_schedules() {
         "period_begin_date": monday.to_string()
     });
 
-    let response2: TestResponse = test_server.server
+    let response2: TestResponse = test_server
+        .server
         .post("/api/v1/schedules")
         .json(&request2)
         .await;
@@ -277,7 +293,8 @@ async fn test_schedule_result_contains_expected_fields() {
 
     let test_server = setup_test_server_with_jobs(vec![job], assignments).await;
 
-    let response: TestResponse = test_server.server
+    let response: TestResponse = test_server
+        .server
         .get(&format!("/api/v1/schedules/{}", job_id))
         .await;
 
@@ -441,7 +458,11 @@ async fn test_job_processor_data_service_error_with_mock() {
         .expect_get_group_members()
         .with(mockall::predicate::eq(group_id))
         .times(1)
-        .returning(|_| Err(shared::DomainError::ExternalServiceError("Data service unavailable".to_string())));
+        .returning(|_| {
+            Err(shared::DomainError::ExternalServiceError(
+                "Data service unavailable".to_string(),
+            ))
+        });
 
     let scheduler = Arc::new(create_test_scheduler());
     let processor = Arc::new(JobProcessor::new(
@@ -491,7 +512,12 @@ async fn test_job_processor_group_not_found_with_mock_data_service() {
         .expect_get_group_members()
         .with(mockall::predicate::eq(group_id))
         .times(1)
-        .returning(|id| Err(shared::DomainError::NotFound(format!("Group {} not found", id))));
+        .returning(|id| {
+            Err(shared::DomainError::NotFound(format!(
+                "Group {} not found",
+                id
+            )))
+        });
 
     let scheduler = Arc::new(create_test_scheduler());
     let processor = Arc::new(JobProcessor::new(

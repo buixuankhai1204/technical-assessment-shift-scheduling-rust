@@ -1,7 +1,9 @@
 use async_trait::async_trait;
 use chrono::Utc;
+use data_service::api::requests::{
+    CreateGroupRequest, CreateStaffRequest, UpdateGroupRequest, UpdateStaffRequest,
+};
 use data_service::api::AppState;
-use data_service::api::requests::{CreateGroupRequest, CreateStaffRequest, UpdateGroupRequest, UpdateStaffRequest};
 use data_service::domain::entities::{GroupMembership, GroupWithMembers, Staff, StaffGroup};
 use data_service::domain::repositories::{GroupRepository, MembershipRepository, StaffRepository};
 use data_service::infrastructure::redis::RedisPool;
@@ -283,9 +285,7 @@ impl MembershipRepository for MockMembershipRepository {
         let initial_len = memberships.len();
         memberships.retain(|m| !(m.staff_id == staff_id && m.group_id == group_id));
         if memberships.len() == initial_len {
-            Err(DomainError::NotFound(
-                "Membership not found".to_string(),
-            ))
+            Err(DomainError::NotFound("Membership not found".to_string()))
         } else {
             Ok(())
         }
@@ -335,4 +335,3 @@ pub fn create_sample_group(id: Uuid, name: &str, parent_id: Option<Uuid>) -> Sta
         updated_at: now,
     }
 }
-

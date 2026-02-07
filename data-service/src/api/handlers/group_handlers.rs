@@ -4,6 +4,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use futures::future::try_join_all;
 use redis::AsyncCommands;
 use shared::{ApiResponse, DomainError, PaginationParams};
 use uuid::Uuid;
@@ -18,8 +19,9 @@ const GROUP_CACHE_TTL: u64 = 300;
 async fn invalidate_cache_pattern(redis_conn: &mut redis::aio::ConnectionManager, pattern: &str) {
     let keys: Result<Vec<String>, _> = redis_conn.keys(pattern).await;
     if let Ok(keys) = keys {
-        for key in keys {
-            let _: Result<(), _> = redis_conn.del::<_, ()>(&key).await;
+        if !keys.is_empty() {
+            // Use Redis DEL command with multiple keys at once instead of looping
+            let _: Result<(), _> = redis::cmd("DEL").arg(&keys).query_async(redis_conn).await;
         }
     }
 }
@@ -165,10 +167,13 @@ pub async fn list_groups(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let mut serialized = Vec::with_capacity(groups.len());
-    for group in groups {
-        serialized.push(to_group_serializer(&state, group).await?);
-    }
+    // Use try_join_all for parallel execution instead of sequential loop
+    let serializer_futures: Vec<_> = groups
+        .into_iter()
+        .map(|group| to_group_serializer(&state, group))
+        .collect();
+
+    let serialized = try_join_all(serializer_futures).await?;
 
     let response = ApiResponse::with_total("Group list retrieved successfully", serialized, total);
 
@@ -281,7 +286,10 @@ pub async fn get_resolved_members(
         .find_by_id(id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
-        .ok_or((StatusCode::NOT_FOUND, format!("Group with id {} not found", id)))?;
+        .ok_or((
+            StatusCode::NOT_FOUND,
+            format!("Group with id {} not found", id),
+        ))?;
 
     let cache_key = format!("group:resolved:{}", id);
     let mut redis_conn = state.redis_pool.clone();

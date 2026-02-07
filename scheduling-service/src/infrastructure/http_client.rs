@@ -47,7 +47,10 @@ impl DataServiceClient {
 impl DataServiceClientTrait for DataServiceClient {
     /// Get all active staff members in a group (including descendants)
     async fn get_group_members(&self, group_id: Uuid) -> DomainResult<Vec<StaffResponse>> {
-        let url = format!("{}/api/v1/groups/{}/resolved-members", self.base_url, group_id);
+        let url = format!(
+            "{}/api/v1/groups/{}/resolved-members",
+            self.base_url, group_id
+        );
 
         let response = self
             .client

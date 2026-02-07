@@ -3,12 +3,12 @@
 #[path = "common/mod.rs"]
 mod common;
 
+use axum::http::StatusCode;
+use axum_test::TestServer;
 use common::{
     create_mock_redis_pool, create_sample_group, create_test_app_state, MockGroupRepository,
     MockMembershipRepository, MockStaffRepository,
 };
-use axum::http::StatusCode;
-use axum_test::TestServer;
 use data_service::api::create_router;
 use serde_json::json;
 use std::sync::Arc;
@@ -48,10 +48,7 @@ async fn test_create_group_success() {
         "name": "Engineering Team"
     });
 
-    let response = server
-        .post("/api/v1/groups")
-        .json(&request_body)
-        .await;
+    let response = server.post("/api/v1/groups").json(&request_body).await;
 
     response.assert_status(StatusCode::CREATED);
     let body: serde_json::Value = response.json();
@@ -71,10 +68,7 @@ async fn test_create_group_with_parent() {
         "parent_id": parent_id.to_string()
     });
 
-    let response = server
-        .post("/api/v1/groups")
-        .json(&request_body)
-        .await;
+    let response = server.post("/api/v1/groups").json(&request_body).await;
 
     response.assert_status(StatusCode::CREATED);
     let body: serde_json::Value = response.json();
@@ -101,7 +95,9 @@ async fn test_get_group_by_id_not_found() {
     let server = setup_test_server().await;
     let non_existent_id = Uuid::new_v4();
 
-    let response = server.get(&format!("/api/v1/groups/{}", non_existent_id)).await;
+    let response = server
+        .get(&format!("/api/v1/groups/{}", non_existent_id))
+        .await;
 
     response.assert_status(StatusCode::NOT_FOUND);
 }
@@ -205,7 +201,9 @@ async fn test_delete_group_not_found() {
     let server = setup_test_server().await;
     let non_existent_id = Uuid::new_v4();
 
-    let response = server.delete(&format!("/api/v1/groups/{}", non_existent_id)).await;
+    let response = server
+        .delete(&format!("/api/v1/groups/{}", non_existent_id))
+        .await;
 
     response.assert_status(StatusCode::NOT_FOUND);
 }
@@ -231,9 +229,11 @@ async fn test_get_resolved_members_not_found() {
     let non_existent_id = Uuid::new_v4();
 
     let response = server
-        .get(&format!("/api/v1/groups/{}/resolved-members", non_existent_id))
+        .get(&format!(
+            "/api/v1/groups/{}/resolved-members",
+            non_existent_id
+        ))
         .await;
 
     response.assert_status(StatusCode::NOT_FOUND);
 }
-

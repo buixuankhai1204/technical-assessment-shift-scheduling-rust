@@ -1,4 +1,5 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use futures::future::join_all;
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use shared::ApiResponse;
@@ -8,9 +9,18 @@ use crate::api::requests::CreateGroupRequest;
 use crate::api::requests::CreateStaffRequest;
 use crate::api::state::AppState;
 
-const STAFF_JSON: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../sample-data/staff.json"));
-const GROUPS_JSON: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../sample-data/groups.json"));
-const MEMBERSHIPS_JSON: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../sample-data/memberships.json"));
+const STAFF_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../sample-data/staff.json"
+));
+const GROUPS_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../sample-data/groups.json"
+));
+const MEMBERSHIPS_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../sample-data/memberships.json"
+));
 
 #[derive(Debug, Deserialize)]
 struct BatchGroupEntry {
@@ -34,8 +44,9 @@ pub struct BatchImportSerializer {
 async fn invalidate_cache_pattern(redis_conn: &mut redis::aio::ConnectionManager, pattern: &str) {
     let keys: Result<Vec<String>, _> = redis_conn.keys(pattern).await;
     if let Ok(keys) = keys {
-        for key in keys {
-            let _: Result<(), _> = redis_conn.del::<_, ()>(&key).await;
+        if !keys.is_empty() {
+            // Use Redis DEL command with multiple keys at once instead of looping
+            let _: Result<(), _> = redis::cmd("DEL").arg(&keys).query_async(redis_conn).await;
         }
     }
 }
@@ -59,12 +70,23 @@ pub async fn batch_import_staff(
         )
     })?;
 
+    // Use join_all to execute all staff creations in parallel
+    let create_futures: Vec<_> = staff_list
+        .into_iter()
+        .map(|staff_request| {
+            let repo = state.staff_repo.clone();
+            async move { repo.create(staff_request).await }
+        })
+        .collect();
+
+    let results = join_all(create_futures).await;
+
     let mut success_count = 0;
     let mut error_count = 0;
     let mut errors = Vec::new();
 
-    for staff_request in staff_list {
-        match state.staff_repo.create(staff_request).await {
+    for result in results {
+        match result {
             Ok(_) => success_count += 1,
             Err(e) => {
                 error_count += 1;
@@ -111,23 +133,44 @@ pub async fn batch_import_groups(
     let mut error_count = 0;
     let mut errors = Vec::new();
 
-    for entry in &entries {
-        let request = CreateGroupRequest {
-            name: entry.name.clone(),
-            parent_id: None,
-        };
-        match state.group_repo.create(request).await {
+    // Phase 1: Create all groups in parallel (without parent relationships)
+    let create_futures: Vec<_> = entries
+        .iter()
+        .map(|entry| {
+            let repo = state.group_repo.clone();
+            let name = entry.name.clone();
+            async move {
+                let request = CreateGroupRequest {
+                    name: name.clone(),
+                    parent_id: None,
+                };
+                (name, repo.create(request).await)
+            }
+        })
+        .collect();
+
+    let create_results = join_all(create_futures).await;
+
+    for (name, result) in create_results {
+        match result {
             Ok(_) => success_count += 1,
             Err(e) => {
                 error_count += 1;
-                errors.push(format!("Failed to create group '{}': {}", entry.name, e));
+                errors.push(format!("Failed to create group '{}': {}", name, e));
             }
         }
     }
 
+    // Phase 2: Set parent relationships (need to be after all groups are created)
     for entry in &entries {
         if let Some(parent_name) = &entry.parent_name {
-            let parent = match state.group_repo.find_by_name(parent_name).await {
+            // Use join! to lookup parent and child in parallel
+            let parent_future = state.group_repo.find_by_name(parent_name);
+            let child_future = state.group_repo.find_by_name(&entry.name);
+
+            let (parent_result, child_result) = futures::join!(parent_future, child_future);
+
+            let parent = match parent_result {
                 Ok(Some(p)) => p,
                 Ok(None) => {
                     error_count += 1;
@@ -139,23 +182,17 @@ pub async fn batch_import_groups(
                 }
                 Err(e) => {
                     error_count += 1;
-                    errors.push(format!(
-                        "Error looking up parent '{}': {}",
-                        parent_name, e
-                    ));
+                    errors.push(format!("Error looking up parent '{}': {}", parent_name, e));
                     continue;
                 }
             };
 
-            let child = match state.group_repo.find_by_name(&entry.name).await {
+            let child = match child_result {
                 Ok(Some(c)) => c,
                 Ok(None) => continue,
                 Err(e) => {
                     error_count += 1;
-                    errors.push(format!(
-                        "Error looking up group '{}': {}",
-                        entry.name, e
-                    ));
+                    errors.push(format!("Error looking up group '{}': {}", entry.name, e));
                     continue;
                 }
             };
@@ -167,10 +204,7 @@ pub async fn batch_import_groups(
 
             if let Err(e) = state.group_repo.update(child.id, update_request).await {
                 error_count += 1;
-                errors.push(format!(
-                    "Failed to set parent for '{}': {}",
-                    entry.name, e
-                ));
+                errors.push(format!("Failed to set parent for '{}': {}", entry.name, e));
             }
         }
     }
@@ -215,11 +249,20 @@ pub async fn batch_import_memberships(
     let mut errors = Vec::new();
 
     for entry in &entries {
-        let staff = match state.staff_repo.find_by_email(&entry.staff_email).await {
+        // Use futures::join! to lookup staff and group in parallel
+        let staff_future = state.staff_repo.find_by_email(&entry.staff_email);
+        let group_future = state.group_repo.find_by_name(&entry.group_name);
+
+        let (staff_result, group_result) = futures::join!(staff_future, group_future);
+
+        let staff = match staff_result {
             Ok(Some(s)) => s,
             Ok(None) => {
                 error_count += 1;
-                errors.push(format!("Staff with email '{}' not found", entry.staff_email));
+                errors.push(format!(
+                    "Staff with email '{}' not found",
+                    entry.staff_email
+                ));
                 continue;
             }
             Err(e) => {
@@ -232,7 +275,7 @@ pub async fn batch_import_memberships(
             }
         };
 
-        let group = match state.group_repo.find_by_name(&entry.group_name).await {
+        let group = match group_result {
             Ok(Some(g)) => g,
             Ok(None) => {
                 error_count += 1;
@@ -249,11 +292,7 @@ pub async fn batch_import_memberships(
             }
         };
 
-        match state
-            .membership_repo
-            .add_member(staff.id, group.id)
-            .await
-        {
+        match state.membership_repo.add_member(staff.id, group.id).await {
             Ok(_) => success_count += 1,
             Err(e) => {
                 error_count += 1;

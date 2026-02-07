@@ -3,12 +3,12 @@
 #[path = "common/mod.rs"]
 mod common;
 
+use axum::http::StatusCode;
+use axum_test::TestServer;
 use common::{
     create_mock_redis_pool, create_sample_staff, create_test_app_state, MockGroupRepository,
     MockMembershipRepository, MockStaffRepository,
 };
-use axum::http::StatusCode;
-use axum_test::TestServer;
 use data_service::api::create_router;
 use serde_json::json;
 use std::sync::Arc;
@@ -26,7 +26,9 @@ async fn setup_test_server() -> TestServer {
     TestServer::new(app).unwrap()
 }
 
-async fn setup_test_server_with_staff(staff_list: Vec<data_service::domain::entities::Staff>) -> TestServer {
+async fn setup_test_server_with_staff(
+    staff_list: Vec<data_service::domain::entities::Staff>,
+) -> TestServer {
     let staff_repo = Arc::new(MockStaffRepository::with_staff(staff_list));
     let group_repo = Arc::new(MockGroupRepository::new());
     let membership_repo = Arc::new(MockMembershipRepository::new());
@@ -59,10 +61,7 @@ async fn test_create_staff_success() {
         "position": "Software Engineer"
     });
 
-    let response = server
-        .post("/api/v1/staff")
-        .json(&request_body)
-        .await;
+    let response = server.post("/api/v1/staff").json(&request_body).await;
 
     response.assert_status(StatusCode::CREATED);
     let body: serde_json::Value = response.json();
@@ -84,10 +83,7 @@ async fn test_create_staff_with_status() {
         "status": "INACTIVE"
     });
 
-    let response = server
-        .post("/api/v1/staff")
-        .json(&request_body)
-        .await;
+    let response = server.post("/api/v1/staff").json(&request_body).await;
 
     response.assert_status(StatusCode::CREATED);
     let body: serde_json::Value = response.json();
@@ -113,7 +109,9 @@ async fn test_get_staff_by_id_not_found() {
     let server = setup_test_server().await;
     let non_existent_id = Uuid::new_v4();
 
-    let response = server.get(&format!("/api/v1/staff/{}", non_existent_id)).await;
+    let response = server
+        .get(&format!("/api/v1/staff/{}", non_existent_id))
+        .await;
 
     response.assert_status(StatusCode::NOT_FOUND);
 }
@@ -219,8 +217,9 @@ async fn test_delete_staff_not_found() {
     let server = setup_test_server().await;
     let non_existent_id = Uuid::new_v4();
 
-    let response = server.delete(&format!("/api/v1/staff/{}", non_existent_id)).await;
+    let response = server
+        .delete(&format!("/api/v1/staff/{}", non_existent_id))
+        .await;
 
     response.assert_status(StatusCode::NOT_FOUND);
 }
-

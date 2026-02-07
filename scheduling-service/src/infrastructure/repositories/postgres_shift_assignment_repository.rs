@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use shared::{DomainError, DomainResult};
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use crate::domain::entities::ShiftAssignment;
@@ -23,34 +23,30 @@ impl ShiftAssignmentRepository for PostgresShiftAssignmentRepository {
             return Ok(());
         }
 
-        let mut transaction = self
-            .pool
-            .begin()
-            .await
-            .map_err(|e| DomainError::DatabaseError(e.to_string()))?;
+        // Use batch insert with QueryBuilder for better performance
+        // PostgreSQL has a limit on the number of bind parameters, so we chunk the inserts
+        const BATCH_SIZE: usize = 1000;
 
-        for assignment in assignments {
-            sqlx::query(
-                r#"
-                INSERT INTO shift_assignments (id, schedule_job_id, staff_id, date, shift, created_at)
-                VALUES ($1, $2, $3, $4, $5, $6)
-                "#,
-            )
-            .bind(assignment.id)
-            .bind(assignment.schedule_job_id)
-            .bind(assignment.staff_id)
-            .bind(assignment.date)
-            .bind(assignment.shift)
-            .bind(assignment.created_at)
-            .execute(&mut *transaction)
-            .await
-            .map_err(|e| DomainError::DatabaseError(e.to_string()))?;
+        for chunk in assignments.chunks(BATCH_SIZE) {
+            let mut query_builder: QueryBuilder<Postgres> = QueryBuilder::new(
+                "INSERT INTO shift_assignments (id, schedule_job_id, staff_id, date, shift, created_at) "
+            );
+
+            query_builder.push_values(chunk, |mut b, assignment| {
+                b.push_bind(assignment.id)
+                    .push_bind(assignment.schedule_job_id)
+                    .push_bind(assignment.staff_id)
+                    .push_bind(assignment.date)
+                    .push_bind(assignment.shift)
+                    .push_bind(assignment.created_at);
+            });
+
+            query_builder
+                .build()
+                .execute(&self.pool)
+                .await
+                .map_err(|e| DomainError::DatabaseError(e.to_string()))?;
         }
-
-        transaction
-            .commit()
-            .await
-            .map_err(|e| DomainError::DatabaseError(e.to_string()))?;
 
         Ok(())
     }

@@ -1,11 +1,11 @@
-use shared::{DomainError, DomainResult, JobStatus};
-use std::sync::Arc;
-use tokio::sync::mpsc;
-use uuid::Uuid;
 use crate::api::requests::schedule_request::ScheduleJobRequest;
 use crate::domain::repositories::{ScheduleJobRepository, ShiftAssignmentRepository};
 use crate::domain::schedule_generator::ScheduleGenerator;
 use crate::infrastructure::http_client::DataServiceClientTrait;
+use shared::{DomainError, DomainResult, JobStatus};
+use std::sync::Arc;
+use tokio::sync::mpsc;
+use uuid::Uuid;
 
 pub struct JobProcessor {
     job_repo: Arc<dyn ScheduleJobRepository>,

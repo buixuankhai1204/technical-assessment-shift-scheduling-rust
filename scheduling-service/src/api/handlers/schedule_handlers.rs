@@ -8,8 +8,8 @@ use chrono::{Datelike, Utc};
 use shared::{ApiResponse, JobStatus};
 use uuid::Uuid;
 
-use crate::api::requests::CreateScheduleRequest;
 use crate::api::requests::schedule_request::ScheduleJobRequest;
+use crate::api::requests::CreateScheduleRequest;
 use crate::api::state::AppState;
 use crate::domain::entities::ScheduleJob;
 use crate::presentation::{

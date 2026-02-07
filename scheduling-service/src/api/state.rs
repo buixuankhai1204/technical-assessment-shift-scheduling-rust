@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use tokio::sync::mpsc;
 use crate::api::requests::schedule_request::ScheduleJobRequest;
 use crate::domain::repositories::{ScheduleJobRepository, ShiftAssignmentRepository};
+use std::sync::Arc;
+use tokio::sync::mpsc;
 
 #[derive(Clone)]
 pub struct AppState {

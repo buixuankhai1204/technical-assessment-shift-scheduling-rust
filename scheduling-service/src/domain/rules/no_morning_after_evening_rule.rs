@@ -1,6 +1,7 @@
 use super::{AssignmentContext, Rule};
 use shared::{DomainError, DomainResult, ShiftType};
 
+#[derive(Default)]
 pub struct NoMorningAfterEveningRule;
 
 impl NoMorningAfterEveningRule {

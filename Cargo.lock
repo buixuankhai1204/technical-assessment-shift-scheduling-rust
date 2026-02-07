@@ -501,6 +501,7 @@ dependencies = [
  "axum-test",
  "chrono",
  "config",
+ "futures",
  "http-body-util",
  "hyper",
  "mockall",

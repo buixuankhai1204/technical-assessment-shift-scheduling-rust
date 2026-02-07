@@ -49,12 +49,7 @@ async fn main() -> Result<()> {
 
     tracing::info!("Repositories initialized");
 
-    let app_state = AppState::new(
-        staff_repo,
-        group_repo,
-        membership_repo,
-        redis_pool,
-    );
+    let app_state = AppState::new(staff_repo, group_repo, membership_repo, redis_pool);
 
     let app = api::create_router(app_state);
     let listener = tokio::net::TcpListener::bind(settings.server_address()).await?;
