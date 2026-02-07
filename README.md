@@ -6,7 +6,7 @@ A comprehensive REST API-based shift scheduling system built with Rust, featurin
 
 - [Overview](#overview)
 - [Architecture](#architecture)
-- [Features](#features)
+- [Database Schema](#database-schema)
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
 - [API Documentation](#api-documentation)
@@ -43,11 +43,49 @@ Both services follow Clean Architecture principles with three distinct layers:
 - **API Documentation**: OpenAPI 3.0 with utoipa
 - **Containerization**: Docker & Docker Compose
 
-## Prerequisites
-- Rust 1.88 or higher
-- Docker and Docker Compose
-- PostgreSQL 15 (via Docker)
-- Redis 7 (via Docker)
+## Database Schema
+### Data Service Database (`data_service_db`)
+#### Entity Relationship Diagram
+
+```
+┌─────────────────┐       ┌────────────────────┐       ┌─────────────────┐
+│     staff       │       │  group_memberships │       │  staff_groups   │
+├─────────────────┤       ├────────────────────┤       ├─────────────────┤
+│ id (PK)         │──────<│ staff_id (FK)      │       │ id (PK)         │
+│ name            │       │ group_id (FK)      │>──────│ name            │
+│ email           │       │ id (PK)            │       │ parent_id (FK)  │───┐
+│ position        │       │ created_at         │       │ created_at      │   │
+│ status          │       └────────────────────┘       │ updated_at      │   │
+│ created_at      │                                    └─────────────────┘   │
+│ updated_at      │                                           ▲              │
+└─────────────────┘                                           └──────────────┘
+                                                          (self-reference)
+```
+
+---
+
+### Scheduling Service Database (`scheduling_service_db`)
+#### Entity Relationship Diagram
+
+```
+┌─────────────────────┐       ┌─────────────────────┐
+│   schedule_jobs     │       │  shift_assignments  │
+├─────────────────────┤       ├─────────────────────┤
+│ id (PK)             │──────<│ schedule_job_id(FK) │
+│ staff_group_id      │       │ id (PK)             │
+│ period_begin_date   │       │ staff_id            │
+│ status              │       │ date                │
+│ error_message       │       │ shift               │
+│ created_at          │       │ created_at          │
+│ updated_at          │       └─────────────────────┘
+│ completed_at        │
+└─────────────────────┘
+```
+
+## Access API Documentation
+
+- **Data Service Swagger UI**: http://localhost:8080/swagger-ui
+- **Scheduling Service Swagger UI**: http://localhost:8081/swagger-ui
 
 ## Getting Started
 
@@ -88,11 +126,6 @@ curl -X POST http://localhost:8080/api/v1/memberships/batch \
   -H "Content-Type: application/json" \
   -d @data/memberships.json
 ```
-
-### 5. Access API Documentation
-
-- **Data Service Swagger UI**: http://localhost:8080/swagger-ui
-- **Scheduling Service Swagger UI**: http://localhost:8081/swagger-ui
 
 ## API Documentation
 
