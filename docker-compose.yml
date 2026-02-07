@@ -71,11 +71,13 @@ services:
       APP__SERVER__PORT: 8081
       APP__DATABASE__URL: postgresql://postgres:postgres@postgresql:5432/scheduling_service_db
       APP__DATABASE__MAX_CONNECTIONS: 10
+      APP__REDIS__URL: redis://redis:6379
       APP__DATA_SERVICE__HOST: data-service
       APP__DATA_SERVICE__PORT: 8080
       APP__SCHEDULING__MIN_DAYS_OFF_PER_WEEK: 1
       APP__SCHEDULING__MAX_DAYS_OFF_PER_WEEK: 2
       APP__SCHEDULING__MAX_DAILY_SHIFT_DIFFERENCE: 1
+      RUST_LOG: scheduling_service=debug,tower_http=debug
     ports:
       - "8081:8081"
     depends_on:
